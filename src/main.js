@@ -3,16 +3,27 @@ import "./style.css";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
+const PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
+const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
+const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
+const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const root = document.querySelector("#app");
 let roomState = { assignments: {}, lights: {} };
 let players = [];
 let items = [];
 
+const LIGHT_PRESETS = {
+  candle: { name: "Свеча · малый свет", brightCells: 1, dimCells: 2, tint: false },
+  torch: { name: "Факел · 20 + 20 футов", brightCells: 4, dimCells: 8, tint: false },
+  lantern: { name: "Фонарь · 30 + 30 футов", brightCells: 6, dimCells: 12, tint: false },
+  darkvision: { name: "Тёмное зрение · серый тон", brightCells: 0, dimCells: 12, tint: true },
+};
+
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const nameOf = (item) => item?.name || "Токен без имени";
 const playerLabel = (player) => player.name || player.metadata?.name || `Игрок …${String(player.id).slice(-6)}`;
 const characterTokens = () => items.filter((item) => item.layer === "CHARACTER" && item.type === "IMAGE");
-const lightObjects = () => items.filter((item) => item.type === "IMAGE" && ["CHARACTER", "PROP", "ATTACHMENT"].includes(item.layer));
+const lightObjects = () => items.filter((item) => item.type === "IMAGE" && ["CHARACTER", "PROP", "ATTACHMENT"].includes(item.layer) && !item.metadata?.[LIGHT_MARKER_KEY]);
 
 async function refresh() {
   const [metadata, party, sceneItems] = await Promise.all([
@@ -44,16 +55,16 @@ function render() {
   const assignments = Object.entries(roomState.assignments).map(([tokenId, entry]) => {
     const token = tokens.find((item) => item.id === tokenId);
     const player = players.find((item) => item.id === entry.playerId);
-    return `<article class="saved-row"><div class="row-title"><strong>${esc(token?.name || entry.tokenName || "Удалённый токен")}</strong><span>${esc(player ? playerLabel(player) : entry.playerName || "Игрок не в комнате")}</span></div><div class="row-meta">${entry.mode === "blind" ? "Ослеплён" : `Обычное зрение: ${Number(entry.brightCells) || 0} кл. · Тёмное зрение: ${Number(entry.darkvisionCells) || 0} кл.`}</div><div class="row-buttons"><button data-edit-assignment="${esc(tokenId)}">Изменить</button><button class="danger" data-remove-assignment="${esc(tokenId)}">Отвязать</button></div></article>`;
+    return `<article class="saved-row"><div class="row-title"><strong>${esc(token?.name || entry.tokenName || "Удалённый токен")}</strong><span>${esc(player ? playerLabel(player) : entry.playerName || "Игрок не в комнате")}</span></div><div class="row-meta">${entry.mode === "blind" ? "Ослеплён" : `Обычное зрение: ${Number(entry.brightCells) || 0} кл. · Тёмное зрение: ${Number(entry.darkvisionCells) || 0} кл.`}</div><div class="row-buttons"><button data-preview-assignment="${esc(tokenId)}">Проверить на себе</button><button data-edit-assignment="${esc(tokenId)}">Изменить</button><button class="danger" data-remove-assignment="${esc(tokenId)}">Отвязать</button></div></article>`;
   }).join("");
   const lights = Object.entries(roomState.lights).map(([itemId, entry]) => {
     const item = objects.find((candidate) => candidate.id === itemId);
-    return `<article class="saved-row"><div class="row-title"><strong>💡 ${esc(item?.name || entry.name || "Удалённый источник")}</strong><span>Источник света</span></div><div class="row-meta">Яркий свет: ${Number(entry.brightCells) || 0} кл. · тусклый свет: ${Number(entry.dimCells) || 0} кл.</div><div class="row-buttons"><button data-edit-light="${esc(itemId)}">Изменить</button><button class="danger" data-remove-light="${esc(itemId)}">Убрать</button></div></article>`;
+    return `<article class="saved-row"><div class="row-title"><strong>💡 ${esc(item?.name || entry.name || "Удалённый источник")}</strong><span>${entry.marker ? "Невидимая метка" : "Источник света"}</span></div><div class="row-meta">${entry.presetName ? `${esc(entry.presetName)} · ` : ""}Яркий: ${Number(entry.brightCells) || 0} кл. · тусклый: ${Number(entry.dimCells) || 0} кл.${entry.tint ? " · серый тон" : ""}</div><div class="row-buttons"><button data-edit-light="${esc(itemId)}">Изменить</button><button class="danger" data-remove-light="${esc(itemId)}">Убрать</button></div></article>`;
   }).join("");
 
   root.innerHTML = `<main class="panel">
     <header><div class="eyebrow">OWLBEAR RODEO · ОТДЕЛЬНОЕ РАСШИРЕНИЕ</div><h1>Личный обзор</h1><p>Каждый игрок видит маску, рассчитанную для его токена.</p></header>
-    <section class="notice"><strong>Как работает эта версия</strong><span>Маска действует отдельно для каждого игрока. Световые круги доступны всем, но видны только в клиенте того игрока, чья маска активна.</span><span>Круги не учитывают стены и линию видимости.</span></section>
+    <section class="notice"><strong>Как работает эта версия</strong><span>Маска действует отдельно для каждого игрока. Кнопка «Проверить на себе» открывает локальный предпросмотр выбранного игрока только у мастера.</span><span>Круги не учитывают стены и линию видимости.</span></section>
     <section class="section ambient-section"><label>Освещение сцены<select id="ambient-select"><option value="bright" ${roomState.ambient === "bright" ? "selected" : ""}>Сцена освещена · обычное зрение</option><option value="dark" ${roomState.ambient === "dark" ? "selected" : ""}>Темнота · без тёмного зрения видны только источники света</option></select></label><button id="save-ambient">Сохранить освещение сцены</button></section>
     <section class="section"><div class="section-head"><div><h2>Токен и игрок</h2><p>Один игрок и один токен могут быть связаны только один раз.</p></div></div>
       <label>Игрок<select id="player-select"><option value="">Выбери игрока</option>${playerOptions}</select></label>
@@ -64,7 +75,10 @@ function render() {
       <div class="saved-list">${assignments || `<div class="empty">Привязок пока нет.</div>`}</div>
     </section>
     <section class="section"><div class="section-head"><div><h2>Источники света</h2><p>Выбери токен или предмет, который несёт свет.</p></div></div>
-      <label>Объект карты<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
+      <label>Готовый профиль<select id="light-preset"><option value="candle">Свеча · малый свет · 1/2 кл.</option><option value="torch">Факел · 20 + 20 футов · 4/8 кл.</option><option value="lantern">Фонарь · 30 + 30 футов · 6/12 кл.</option><option value="darkvision">Тёмное зрение · серый тон · 12 кл.</option></select></label>
+      <button id="place-light-marker">Поставить невидимую метку на карте</button>
+      <p class="hint">Нажмите кнопку, затем щёлкните по карте в точке источника. Метка почти прозрачная и будет добавлена в список ниже.</p>
+      <label>Или назначить свет существующему объекту<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
       <div class="two-fields"><label>Яркий свет, клетки<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Тусклый свет, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
       <button class="primary" id="save-light">Добавить / сохранить источник</button>
       <div class="saved-list">${lights || `<div class="empty">Источников света пока нет.</div>`}</div>
@@ -96,11 +110,37 @@ function render() {
     const itemId = root.querySelector("#light-select").value;
     if (!itemId) return OBR.notification.show("Выбери объект карты.");
     const item = objects.find((candidate) => candidate.id === itemId);
-    roomState.lights[itemId] = { name: nameOf(item), brightCells: clamp(root.querySelector("#light-bright").value), dimCells: clamp(root.querySelector("#light-dim").value) };
+    const presetId = root.querySelector("#light-preset").value;
+    const preset = LIGHT_PRESETS[presetId];
+    roomState.lights[itemId] = { name: nameOf(item), brightCells: clamp(root.querySelector("#light-bright").value), dimCells: clamp(root.querySelector("#light-dim").value), tint: Boolean(preset?.tint), presetName: preset?.name || "" };
     await persist();
   };
+  root.querySelector("#light-preset").onchange = (event) => {
+    const preset = LIGHT_PRESETS[event.target.value];
+    root.querySelector("#light-bright").value = preset.brightCells;
+    root.querySelector("#light-dim").value = preset.dimCells;
+  };
+  root.querySelector("#light-preset").dispatchEvent(new Event("change"));
+  root.querySelector("#place-light-marker").onclick = async () => {
+    const presetId = root.querySelector("#light-preset").value;
+    await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PLACE_PRESET_KEY]: { id: presetId, ...LIGHT_PRESETS[presetId] } });
+    await OBR.tool.activateMode(`${EXTENSION_ID}/gm-tool`, PLACE_MODE_ID);
+    OBR.notification.show(`Выбран профиль «${LIGHT_PRESETS[presetId].name}». Щёлкните по карте, чтобы поставить источник.`);
+  };
+  root.querySelectorAll("[data-preview-assignment]").forEach((button) => button.onclick = async () => {
+    const entry = roomState.assignments[button.dataset.previewAssignment];
+    const url = new URL("./viewer.html", location.href);
+    url.searchParams.set("preview", entry.playerId);
+    await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: false });
+  });
   root.querySelectorAll("[data-remove-assignment]").forEach((button) => button.onclick = async () => { delete roomState.assignments[button.dataset.removeAssignment]; await persist(); });
-  root.querySelectorAll("[data-remove-light]").forEach((button) => button.onclick = async () => { delete roomState.lights[button.dataset.removeLight]; await persist(); });
+  root.querySelectorAll("[data-remove-light]").forEach((button) => button.onclick = async () => {
+    const itemId = button.dataset.removeLight;
+    if (roomState.lights[itemId]?.marker) await OBR.scene.items.deleteItems([itemId]);
+    delete roomState.lights[itemId];
+    await persist();
+  });
   root.querySelectorAll("[data-edit-assignment]").forEach((button) => button.onclick = () => {
     const entry = roomState.assignments[button.dataset.editAssignment];
     root.querySelector("#token-select").value = button.dataset.editAssignment;
@@ -115,6 +155,7 @@ function render() {
     root.querySelector("#light-select").value = button.dataset.editLight;
     root.querySelector("#light-bright").value = entry.brightCells;
     root.querySelector("#light-dim").value = entry.dimCells;
+    if (entry.tint) root.querySelector("#light-preset").value = "darkvision";
   });
 }
 
