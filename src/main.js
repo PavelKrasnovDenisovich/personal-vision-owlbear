@@ -73,7 +73,7 @@ function render() {
       <div class="two-fields"><label>Яркий радиус, клетки<input id="bright-range" type="number" min="0" max="200" value="8"></label><label>Тёмное зрение, клетки<input id="dark-range" type="number" min="0" max="200" value="0"></label></div>
       <button class="primary" id="save-assignment">Привязать / сохранить</button>
       <button id="preview-current">Посмотреть текущий обзор на себе</button>
-      <p class="hint">Выберите токен и радиусы выше. Игрок и сохранение привязки не нужны; предпросмотр виден только мастеру.</p>
+      <p class="hint">Выберите токен и радиусы выше. Игрок и сохранение не нужны. В просмотре карта двигается; Escape вернёт панель.</p>
       <div class="saved-list">${assignments || `<div class="empty">Привязок пока нет.</div>`}</div>
     </section>
     <section class="section"><div class="section-head"><div><h2>Источники света</h2><p>Выбери токен или предмет, который несёт свет.</p></div></div>
@@ -141,14 +141,16 @@ function render() {
     url.searchParams.set("previewDark", String(clamp(root.querySelector("#dark-range").value)));
     url.searchParams.set("previewAmbient", root.querySelector("#ambient-select").value);
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
-    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: false });
+    await OBR.popover.close(`${EXTENSION_ID}/manager`);
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
   };
   root.querySelectorAll("[data-preview-assignment]").forEach((button) => button.onclick = async () => {
     const entry = roomState.assignments[button.dataset.previewAssignment];
     const url = new URL("./viewer.html", location.href);
     url.searchParams.set("previewPlayer", entry.playerId);
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
-    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: false });
+    await OBR.popover.close(`${EXTENSION_ID}/manager`);
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
   });
   root.querySelectorAll("[data-remove-assignment]").forEach((button) => button.onclick = async () => { delete roomState.assignments[button.dataset.removeAssignment]; await persist(); });
   root.querySelectorAll("[data-remove-light]").forEach((button) => button.onclick = async () => {

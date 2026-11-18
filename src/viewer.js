@@ -5,8 +5,6 @@ const STATE_KEY = `${EXTENSION_ID}/state`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const canvas = document.querySelector("#vision");
 const context = canvas.getContext("2d", { alpha: true });
-const previewControl = document.querySelector("#preview-control");
-const previewLabel = document.querySelector("#preview-label");
 let sceneItems = [];
 let sceneState = { assignments: {}, lights: {} };
 let gridDpi = 70;
@@ -16,8 +14,6 @@ let isGmPreview = false;
 document.documentElement.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden";
 document.body.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden;pointer-events:none";
 canvas.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none";
-previewControl.style.cssText = "display:none;position:fixed;z-index:2147483647;top:12px;left:50%;transform:translateX(-50%);align-items:center;gap:12px;padding:8px 10px 8px 14px;border:1px solid rgba(220,225,215,.35);border-radius:999px;background:rgba(24,28,24,.9);color:#f0f1e8;font:600 12px system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.35);pointer-events:auto";
-document.querySelector("#close-preview").style.cssText = "border:0;border-radius:999px;padding:6px 10px;background:#526543;color:#fff;font:600 11px system-ui,sans-serif;cursor:pointer";
 
 function activeAssignment() {
   if (window.__visionPreviewAssignment) return window.__visionPreviewAssignment;
@@ -147,15 +143,15 @@ OBR.onReady(async () => {
   } : null;
   window.__visionPreviewAmbient = isGmPreview && requestedTokenId ? params.get("previewAmbient") : null;
   if (isGmPreview) {
-    document.body.style.pointerEvents = "auto";
-    previewControl.style.display = "flex";
-    document.querySelector("#close-preview").addEventListener("click", () => OBR.modal.close(PREVIEW_MODAL_ID));
+    window.addEventListener("keydown", async (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+      await OBR.modal.close(PREVIEW_MODAL_ID);
+    }, true);
   }
   await refreshScene();
-  if (isGmPreview) {
-    const assignment = activeAssignment();
-    previewLabel.textContent = `Проверка: ${assignment?.playerName || "игрок"}`;
-  }
   OBR.scene.onMetadataChange((metadata) => {
     sceneState = metadata[STATE_KEY] || { ambient: "bright", assignments: {}, lights: {} };
     sceneState.ambient ||= "bright";
