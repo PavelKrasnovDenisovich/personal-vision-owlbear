@@ -64,7 +64,7 @@ function render() {
 
   root.innerHTML = `<main class="panel">
     <header><div class="eyebrow">OWLBEAR RODEO · ОТДЕЛЬНОЕ РАСШИРЕНИЕ</div><h1>Личный обзор</h1><p>Каждый игрок видит маску, рассчитанную для его токена.</p></header>
-    <section class="notice"><strong>Как работает эта версия</strong><span>Маска действует отдельно для каждого игрока. Кнопка «Проверить на себе» открывает локальный предпросмотр выбранного игрока только у мастера.</span><span>Круги не учитывают стены и линию видимости.</span></section>
+    <section class="notice"><strong>Как работает эта версия</strong><span>Маска действует отдельно для каждого игрока. Текущий токен и радиусы можно проверить на экране мастера без игрока и без сохранения.</span><span>Круги не учитывают стены и линию видимости.</span></section>
     <section class="section ambient-section"><label>Освещение сцены<select id="ambient-select"><option value="bright" ${roomState.ambient === "bright" ? "selected" : ""}>Сцена освещена · обычное зрение</option><option value="dark" ${roomState.ambient === "dark" ? "selected" : ""}>Темнота · без тёмного зрения видны только источники света</option></select></label><button id="save-ambient">Сохранить освещение сцены</button></section>
     <section class="section"><div class="section-head"><div><h2>Токен и игрок</h2><p>Один игрок и один токен могут быть связаны только один раз.</p></div></div>
       <label>Игрок<select id="player-select"><option value="">Выбери игрока</option>${playerOptions}</select></label>
@@ -72,12 +72,14 @@ function render() {
       <label>Режим зрения<select id="mode-select"><option value="limited">Ограниченный обзор</option><option value="blind">Ослеплён · экран закрыт</option></select></label>
       <div class="two-fields"><label>Яркий радиус, клетки<input id="bright-range" type="number" min="0" max="200" value="8"></label><label>Тёмное зрение, клетки<input id="dark-range" type="number" min="0" max="200" value="0"></label></div>
       <button class="primary" id="save-assignment">Привязать / сохранить</button>
+      <button id="preview-current">Посмотреть текущий обзор на себе</button>
+      <p class="hint">Выберите токен и радиусы выше. Игрок и сохранение привязки не нужны; предпросмотр виден только мастеру.</p>
       <div class="saved-list">${assignments || `<div class="empty">Привязок пока нет.</div>`}</div>
     </section>
     <section class="section"><div class="section-head"><div><h2>Источники света</h2><p>Выбери токен или предмет, который несёт свет.</p></div></div>
       <label>Готовый профиль<select id="light-preset"><option value="candle">Свеча · малый свет · 1/2 кл.</option><option value="torch">Факел · 20 + 20 футов · 4/8 кл.</option><option value="lantern">Фонарь · 30 + 30 футов · 6/12 кл.</option><option value="darkvision">Тёмное зрение · серый тон · 12 кл.</option></select></label>
-      <button id="place-light-marker">Поставить невидимую метку на карте</button>
-      <p class="hint">Нажмите кнопку, затем щёлкните по карте в точке источника. Метка почти прозрачная и будет добавлена в список ниже.</p>
+      <button id="place-light-marker">Выбрать место источника на карте</button>
+      <p class="hint">Выберите профиль и нажмите кнопку. Панель закроется: щёлкните по карте, куда поставить почти невидимую метку. Escape отменяет размещение.</p>
       <label>Или назначить свет существующему объекту<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
       <div class="two-fields"><label>Яркий свет, клетки<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Тусклый свет, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
       <button class="primary" id="save-light">Добавить / сохранить источник</button>
@@ -124,13 +126,27 @@ function render() {
   root.querySelector("#place-light-marker").onclick = async () => {
     const presetId = root.querySelector("#light-preset").value;
     await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PLACE_PRESET_KEY]: { id: presetId, ...LIGHT_PRESETS[presetId] } });
+    await OBR.tool.activateTool(`${EXTENSION_ID}/gm-tool`);
     await OBR.tool.activateMode(`${EXTENSION_ID}/gm-tool`, PLACE_MODE_ID);
+    await OBR.popover.close(`${EXTENSION_ID}/manager`);
     OBR.notification.show(`Выбран профиль «${LIGHT_PRESETS[presetId].name}». Щёлкните по карте, чтобы поставить источник.`);
+  };
+  root.querySelector("#preview-current").onclick = async () => {
+    const tokenId = root.querySelector("#token-select").value;
+    if (!tokenId) return OBR.notification.show("Для предпросмотра выберите токен персонажа на карте.");
+    const url = new URL("./viewer.html", location.href);
+    url.searchParams.set("previewToken", tokenId);
+    url.searchParams.set("previewMode", root.querySelector("#mode-select").value);
+    url.searchParams.set("previewBright", String(clamp(root.querySelector("#bright-range").value)));
+    url.searchParams.set("previewDark", String(clamp(root.querySelector("#dark-range").value)));
+    url.searchParams.set("previewAmbient", root.querySelector("#ambient-select").value);
+    await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: false });
   };
   root.querySelectorAll("[data-preview-assignment]").forEach((button) => button.onclick = async () => {
     const entry = roomState.assignments[button.dataset.previewAssignment];
     const url = new URL("./viewer.html", location.href);
-    url.searchParams.set("preview", entry.playerId);
+    url.searchParams.set("previewPlayer", entry.playerId);
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
     await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: false });
   });

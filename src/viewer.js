@@ -20,6 +20,7 @@ previewControl.style.cssText = "display:none;position:fixed;z-index:2147483647;t
 document.querySelector("#close-preview").style.cssText = "border:0;border-radius:999px;padding:6px 10px;background:#526543;color:#fff;font:600 11px system-ui,sans-serif;cursor:pointer";
 
 function activeAssignment() {
+  if (window.__visionPreviewAssignment) return window.__visionPreviewAssignment;
   const playerId = window.__visionPlayerId;
   return Object.values(sceneState.assignments || {}).find((entry) => entry.playerId === playerId) || null;
 }
@@ -108,7 +109,7 @@ async function draw() {
     if (tokenCenter) {
       const point = await screenPoint(tokenCenter);
       if (point) {
-        if (sceneState.ambient === "dark") circles.push({ ...point, radius: radiusFor(assignment.darkvisionCells), strength: 0.68, tint: true });
+        if ((window.__visionPreviewAmbient || sceneState.ambient) === "dark") circles.push({ ...point, radius: radiusFor(assignment.darkvisionCells), strength: 0.68, tint: true });
         else circles.push({ ...point, radius: radiusFor(assignment.brightCells), strength: 1 });
       }
     }
@@ -132,9 +133,19 @@ async function draw() {
 
 OBR.onReady(async () => {
   const [role, localPlayerId] = await Promise.all([OBR.player.getRole(), OBR.player.getId()]);
-  const requestedPreviewId = new URLSearchParams(location.search).get("preview");
-  isGmPreview = role === "GM" && Boolean(requestedPreviewId);
-  window.__visionPlayerId = isGmPreview ? requestedPreviewId : localPlayerId;
+  const params = new URLSearchParams(location.search);
+  const requestedPlayerId = params.get("previewPlayer");
+  const requestedTokenId = params.get("previewToken");
+  isGmPreview = role === "GM" && Boolean(requestedPlayerId || requestedTokenId);
+  window.__visionPlayerId = isGmPreview && requestedPlayerId ? requestedPlayerId : localPlayerId;
+  window.__visionPreviewAssignment = isGmPreview && requestedTokenId ? {
+    tokenId: requestedTokenId,
+    mode: params.get("previewMode") || "limited",
+    brightCells: Number(params.get("previewBright")) || 0,
+    darkvisionCells: Number(params.get("previewDark")) || 0,
+    playerName: "Пробный просмотр",
+  } : null;
+  window.__visionPreviewAmbient = isGmPreview && requestedTokenId ? params.get("previewAmbient") : null;
   if (isGmPreview) {
     document.body.style.pointerEvents = "auto";
     previewControl.style.display = "flex";
