@@ -4,11 +4,14 @@ const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const canvas = document.querySelector("#vision");
-const context = canvas.getContext("2d", { alpha: true });
+const displayContext = canvas.getContext("2d", { alpha: true });
+const frameCanvas = document.createElement("canvas");
+const context = frameCanvas.getContext("2d", { alpha: true });
 let sceneItems = [];
 let sceneState = { assignments: {}, lights: {} };
 let gridDpi = 70;
 let drawing = false;
+let drawPending = false;
 let isGmPreview = false;
 
 document.documentElement.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden";
@@ -78,52 +81,69 @@ function tintCircle(circle) {
 }
 
 async function draw() {
-  if (drawing) return;
+  if (drawing) {
+    drawPending = true;
+    return;
+  }
   drawing = true;
   try {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
-    if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-    }
-    context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    context.clearRect(0, 0, width, height);
-    context.globalCompositeOperation = "source-over";
-    context.globalAlpha = 1;
-    context.fillStyle = "rgba(0,0,0,0.97)";
-    context.fillRect(0, 0, width, height);
-
-    const assignment = activeAssignment();
-    if (!assignment || assignment.mode === "blind") return;
-    const scale = Number(await OBR.viewport.getScale()) || 1;
-    const radiusFor = (cells) => Math.max(0, Number(cells) || 0) * gridDpi * scale;
-    const circles = [];
-    const tokenId = assignment.tokenId;
-    const tokenCenter = await getCenter(tokenId);
-    if (tokenCenter) {
-      const point = await screenPoint(tokenCenter);
-      if (point) {
-        if ((window.__visionPreviewAmbient || sceneState.ambient) === "dark") circles.push({ ...point, radius: radiusFor(assignment.darkvisionCells), strength: 0.68, tint: true });
-        else circles.push({ ...point, radius: radiusFor(assignment.brightCells), strength: 1 });
+    do {
+      drawPending = false;
+      const assignment = activeAssignment();
+      const circles = [];
+      if (assignment && assignment.mode !== "blind") {
+        const scale = Number(await OBR.viewport.getScale()) || 1;
+        const radiusFor = (cells) => Math.max(0, Number(cells) || 0) * gridDpi * scale;
+        const tokenCenter = await getCenter(assignment.tokenId);
+        if (tokenCenter) {
+          const point = await screenPoint(tokenCenter);
+          if (point) {
+            if ((window.__visionPreviewAmbient || sceneState.ambient) === "dark") circles.push({ ...point, radius: radiusFor(assignment.darkvisionCells), strength: 0.68, tint: true });
+            else circles.push({ ...point, radius: radiusFor(assignment.brightCells), strength: 1 });
+          }
+        }
+        for (const [itemId, light] of Object.entries(sceneState.lights || {})) {
+          const center = await getCenter(itemId);
+          if (!center) continue;
+          const point = await screenPoint(center);
+          if (!point) continue;
+          circles.push({ ...point, radius: radiusFor(light.dimCells), strength: light.tint ? 0.68 : 0.45, tint: Boolean(light.tint) });
+          circles.push({ ...point, radius: radiusFor(light.brightCells), strength: 1 });
+        }
       }
-    }
-    for (const [itemId, light] of Object.entries(sceneState.lights || {})) {
-      const center = await getCenter(itemId);
-      if (!center) continue;
-      const point = await screenPoint(center);
-      if (!point) continue;
-      circles.push({ ...point, radius: radiusFor(light.dimCells), strength: light.tint ? 0.68 : 0.45, tint: Boolean(light.tint) });
-      circles.push({ ...point, radius: radiusFor(light.brightCells), strength: 1 });
-    }
-    // Dim vision cuts away a little of the opaque mask; bright vision clears it completely.
-    for (const circle of circles.filter((entry) => entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-    for (const circle of circles.filter((entry) => entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-    for (const circle of circles.filter((entry) => entry.tint)) tintCircle(circle);
-    context.globalCompositeOperation = "source-over";
+
+      // Render offscreen, then swap one finished frame onto the visible canvas. This avoids
+      // exposing the opaque mask while viewport and item geometry are fetched asynchronously.
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
+      if (frameCanvas.width !== pixelWidth || frameCanvas.height !== pixelHeight) {
+        frameCanvas.width = pixelWidth;
+        frameCanvas.height = pixelHeight;
+      }
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      context.clearRect(0, 0, width, height);
+      context.globalCompositeOperation = "source-over";
+      context.globalAlpha = 1;
+      context.fillStyle = "rgba(0,0,0,0.97)";
+      context.fillRect(0, 0, width, height);
+      for (const circle of circles.filter((entry) => entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
+      for (const circle of circles.filter((entry) => entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
+      for (const circle of circles.filter((entry) => entry.tint)) tintCircle(circle);
+      context.globalCompositeOperation = "source-over";
+      displayContext.setTransform(1, 0, 0, 1, 0, 0);
+      displayContext.clearRect(0, 0, pixelWidth, pixelHeight);
+      displayContext.drawImage(frameCanvas, 0, 0);
+    } while (drawPending);
   } finally {
     drawing = false;
+    if (drawPending) draw();
   }
 }
 
@@ -143,11 +163,15 @@ OBR.onReady(async () => {
   } : null;
   window.__visionPreviewAmbient = isGmPreview && requestedTokenId ? params.get("previewAmbient") : null;
   if (isGmPreview) {
+    document.body.tabIndex = -1;
+    document.body.focus({ preventScroll: true });
+    window.focus();
     window.addEventListener("keydown", async (event) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
       event.stopPropagation();
       await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+      await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [`${EXTENSION_ID}/preview-active`]: false });
       await OBR.modal.close(PREVIEW_MODAL_ID);
     }, true);
   }
@@ -162,6 +186,7 @@ OBR.onReady(async () => {
   OBR.scene.items.onChange(async () => { await refreshScene(); await draw(); });
   OBR.scene.onReadyChange(async (ready) => { if (ready) await refreshScene(); await draw(); });
   window.addEventListener("resize", draw);
+  window.addEventListener("focus", draw);
   window.setInterval(draw, 160);
   await draw();
 });

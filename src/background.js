@@ -4,9 +4,11 @@ const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
 const TOOL_ID = `${EXTENSION_ID}/gm-tool`;
 const MODAL_ID = `${EXTENSION_ID}/vision-mask`;
+const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
 const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
+const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
 const visionUrl = new URL("./viewer.html", location.href).href;
 
 function selectVision(state, playerId) {
@@ -26,8 +28,16 @@ OBR.onReady(async () => {
         label: "Личный обзор · настройка",
         filter: { roles: ["GM"] },
       }],
-      onClick() {
+      async onClick(context) {
+        const metadata = await OBR.tool.getMetadata(TOOL_ID);
+        if (metadata?.[PREVIEW_ACTIVE_KEY] || context.metadata?.[PREVIEW_ACTIVE_KEY]) {
+          await OBR.tool.setMetadata(TOOL_ID, { [PREVIEW_ACTIVE_KEY]: false });
+          await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+          await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
+          return false;
+        }
         OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+        return true;
       },
     });
     await OBR.tool.createMode({
@@ -73,7 +83,7 @@ OBR.onReady(async () => {
           marker: true,
         };
         await OBR.scene.setMetadata({ [STATE_KEY]: state });
-        OBR.notification.show(`Источник «${preset.name}» поставлен. Повторный щелчок разместит ещё один.`);
+        OBR.notification.show(`Источник «${preset.name}» добавлен. Повторный щелчок поставит ещё один; Escape отменит размещение.`);
         return false;
       },
     });

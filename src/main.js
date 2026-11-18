@@ -7,6 +7,7 @@ const PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
 const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
+const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
 const root = document.querySelector("#app");
 let roomState = { assignments: {}, lights: {} };
 let players = [];
@@ -59,7 +60,7 @@ function render() {
   }).join("");
   const lights = Object.entries(roomState.lights).map(([itemId, entry]) => {
     const item = objects.find((candidate) => candidate.id === itemId);
-    return `<article class="saved-row"><div class="row-title"><strong>💡 ${esc(item?.name || entry.name || "Удалённый источник")}</strong><span>${entry.marker ? "Невидимая метка" : "Источник света"}</span></div><div class="row-meta">${entry.presetName ? `${esc(entry.presetName)} · ` : ""}Яркий: ${Number(entry.brightCells) || 0} кл. · тусклый: ${Number(entry.dimCells) || 0} кл.${entry.tint ? " · серый тон" : ""}</div><div class="row-buttons"><button data-edit-light="${esc(itemId)}">Изменить</button><button class="danger" data-remove-light="${esc(itemId)}">Убрать</button></div></article>`;
+    return `<article class="saved-row"><div class="row-title"><strong>💡 ${esc(item?.name || entry.name || "Удалённый источник")}</strong><span>${entry.marker ? "Невидимая метка" : "Источник света"}</span></div><div class="row-meta">${entry.presetName ? `${esc(entry.presetName)} · ` : ""}Яркая область: ${Number(entry.brightCells) || 0} кл. · внешний тусклый радиус: ${Number(entry.dimCells) || 0} кл.${entry.tint ? " · серый тон" : ""}</div><div class="row-buttons"><button data-edit-light="${esc(itemId)}">Изменить</button><button class="danger" data-remove-light="${esc(itemId)}">Убрать</button></div></article>`;
   }).join("");
 
   root.innerHTML = `<main class="panel">
@@ -73,16 +74,16 @@ function render() {
       <div class="two-fields"><label>Яркий радиус, клетки<input id="bright-range" type="number" min="0" max="200" value="8"></label><label>Тёмное зрение, клетки<input id="dark-range" type="number" min="0" max="200" value="0"></label></div>
       <button class="primary" id="save-assignment">Привязать / сохранить</button>
       <button id="preview-current">Посмотреть текущий обзор на себе</button>
-      <p class="hint">Выберите токен и радиусы выше. Игрок и сохранение не нужны. В просмотре карта двигается; Escape вернёт панель.</p>
+      <p class="hint">Выберите токен и радиусы выше. Игрок и сохранение не нужны. В просмотре карта двигается; Escape или повторное нажатие значка расширения вернёт панель.</p>
       <div class="saved-list">${assignments || `<div class="empty">Привязок пока нет.</div>`}</div>
     </section>
     <section class="section"><div class="section-head"><div><h2>Источники света</h2><p>Выбери токен или предмет, который несёт свет.</p></div></div>
-      <label>Готовый профиль<select id="light-preset"><option value="candle">Свеча · малый свет · 1/2 кл.</option><option value="torch">Факел · 20 + 20 футов · 4/8 кл.</option><option value="lantern">Фонарь · 30 + 30 футов · 6/12 кл.</option><option value="darkvision">Тёмное зрение · серый тон · 12 кл.</option></select></label>
-      <button id="place-light-marker">Выбрать место источника на карте</button>
-      <p class="hint">Выберите профиль и нажмите кнопку. Панель закроется: щёлкните по карте, куда поставить почти невидимую метку. Escape отменяет размещение.</p>
-      <label>Или назначить свет существующему объекту<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
-      <div class="two-fields"><label>Яркий свет, клетки<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Тусклый свет, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
-      <button class="primary" id="save-light">Добавить / сохранить источник</button>
+      <label>Профиль для новой метки<select id="light-preset"><option value="candle">Свеча · яркая 1, внешний радиус 2 кл.</option><option value="torch">Факел · яркий 4, внешний радиус 8 кл.</option><option value="lantern">Фонарь · яркий 6, внешний радиус 12 кл.</option><option value="darkvision">Тёмное зрение · серый тон 12 кл.</option></select></label>
+      <button id="place-light-marker">Поставить выбранный источник…</button>
+      <p class="hint">Новая невидимая метка: выберите профиль → нажмите кнопку → панель закроется → щёлкните в точку на карте. Чтобы увидеть разницу, задайте сцене «Темнота», персонажу 0 тёмного зрения и включите предпросмотр. Для существующей картинки выберите её ниже и нажмите «Назначить профиль».</p>
+      <label>Уже есть картинка свечи/фонаря? Выберите её<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
+      <div class="two-fields"><label>Яркая область, клеток радиус<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Внешний тусклый радиус, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
+      <button class="primary" id="save-light">Назначить профиль выбранному объекту</button>
       <div class="saved-list">${lights || `<div class="empty">Источников света пока нет.</div>`}</div>
     </section>
     <footer>Настройки хранятся в метаданных текущей сцены. Участники должны открыть комнату с включённым расширением.</footer>
@@ -121,6 +122,7 @@ function render() {
     const preset = LIGHT_PRESETS[event.target.value];
     root.querySelector("#light-bright").value = preset.brightCells;
     root.querySelector("#light-dim").value = preset.dimCells;
+    root.querySelector("#place-light-marker").textContent = `Поставить: ${preset.name}`;
   };
   root.querySelector("#light-preset").dispatchEvent(new Event("change"));
   root.querySelector("#place-light-marker").onclick = async () => {
@@ -141,6 +143,7 @@ function render() {
     url.searchParams.set("previewDark", String(clamp(root.querySelector("#dark-range").value)));
     url.searchParams.set("previewAmbient", root.querySelector("#ambient-select").value);
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
+    await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PREVIEW_ACTIVE_KEY]: true });
     await OBR.popover.close(`${EXTENSION_ID}/manager`);
     await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
   };
@@ -149,6 +152,7 @@ function render() {
     const url = new URL("./viewer.html", location.href);
     url.searchParams.set("previewPlayer", entry.playerId);
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
+    await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PREVIEW_ACTIVE_KEY]: true });
     await OBR.popover.close(`${EXTENSION_ID}/manager`);
     await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
   });
