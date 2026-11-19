@@ -4,8 +4,6 @@ import { version as extensionVersion } from "../package.json";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
-const PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
-const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
@@ -84,9 +82,7 @@ function render() {
       <div class="saved-list">${assignments || `<div class="empty">Привязок пока нет.</div>`}</div>
     </section>
     <section class="section"><div class="section-head"><div><h2>Источники света</h2><p>Выбери токен или предмет, который несёт свет.</p></div></div>
-      <label>Профиль для новой метки<select id="light-preset"><option value="candle">Свеча · яркая 1, внешний радиус 2 кл.</option><option value="torch">Факел · яркий 4, внешний радиус 8 кл.</option><option value="lantern">Фонарь · яркий 6, внешний радиус 12 кл.</option><option value="darkvision">Тёмное зрение · серый тон 12 кл.</option></select></label>
-      <button id="place-light-marker">Поставить выбранный источник…</button>
-      <p class="hint">Выберите профиль и нажмите кнопку, затем щёлкните по карте. Свет работает независимо от радиуса зрения персонажа. В темноте персонаж без тёмного зрения увидит области фонарей; тёмное зрение добавит серую область вокруг самого персонажа. Во время предпросмотра золотой контур показывает яркий свет, пунктирный — границу тусклого света.</p>
+      <label>Профиль для выбранного объекта<select id="light-preset"><option value="candle">Свеча · яркая 1, внешний радиус 2 кл.</option><option value="torch">Факел · яркий 4, внешний радиус 8 кл.</option><option value="lantern">Фонарь · яркий 6, внешний радиус 12 кл.</option><option value="darkvision">Тёмное зрение · серый тон 12 кл.</option></select></label>
       <label>Уже есть картинка свечи/фонаря? Выберите её<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
       <div class="two-fields"><label>Яркая область, клеток радиус<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Граница тусклого света, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
       <button class="primary" id="save-light">Назначить профиль выбранному объекту</button>
@@ -128,32 +124,8 @@ function render() {
     const preset = LIGHT_PRESETS[event.target.value];
     root.querySelector("#light-bright").value = preset.brightCells;
     root.querySelector("#light-dim").value = preset.dimCells;
-    root.querySelector("#place-light-marker").textContent = `Поставить: ${preset.name}`;
   };
   root.querySelector("#light-preset").dispatchEvent(new Event("change"));
-  root.querySelector("#place-light-marker").onclick = async () => {
-    const presetId = root.querySelector("#light-preset").value;
-    await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PLACE_PRESET_KEY]: { id: presetId, ...LIGHT_PRESETS[presetId] } });
-    // Close the manager before activating the placement mode. Closing a popover
-    // after activation can restore the previous (Move) tool and swallow the click.
-    await OBR.popover.close(`${EXTENSION_ID}/manager`);
-    await OBR.tool.activateTool(`${EXTENSION_ID}/gm-tool`);
-    await OBR.tool.activateMode(`${EXTENSION_ID}/gm-tool`, PLACE_MODE_ID);
-    let modeIsActive = false;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      const [activeTool, activeMode] = await Promise.all([OBR.tool.getActiveTool(), OBR.tool.getActiveToolMode()]);
-      if (activeTool === `${EXTENSION_ID}/gm-tool` && activeMode === PLACE_MODE_ID) {
-        modeIsActive = true;
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    if (!modeIsActive) {
-      OBR.notification.show("Режим установки не включился. Повторно нажмите «Поставить источник».");
-      return;
-    }
-    OBR.notification.show(`Режим установки активен (${extensionVersion}). Щёлкните по карте, чтобы поставить «${LIGHT_PRESETS[presetId].name}».`);
-  };
   root.querySelector("#preview-current").onclick = async () => {
     const tokenId = root.querySelector("#token-select").value;
     if (!tokenId) return OBR.notification.show("Для предпросмотра выберите токен персонажа на карте.");

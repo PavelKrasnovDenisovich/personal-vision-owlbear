@@ -95,11 +95,12 @@ function maskShader(circles, blind) {
   color = mix(color, vec3(gray), tintAmount * 0.25);
   return half4(color, 1.0);`;
   return `uniform shader scene;
-uniform mat3 view;
 ${declarations}
 half4 main(float2 coord) {
-  vec2 screenPoint = (vec3(coord, 1.0) * view).xy;
-  half4 sceneColor = scene.eval(screenPoint);
+  // Circle centers are already transformed into viewport pixels by OBR.
+  // Comparing against a second view transform shifted and scaled the mask.
+  vec2 screenPoint = coord;
+  half4 sceneColor = scene.eval(coord);
   ${result}
 }`;
 }
@@ -282,7 +283,7 @@ OBR.onReady(async () => {
       width: 226,
       height: 54,
       anchorReference: "POSITION",
-      anchorPosition: { left: 16, top: 16 },
+      anchorPosition: { left: 300, top: 16 },
       anchorOrigin: { horizontal: "LEFT", vertical: "TOP" },
       transformOrigin: { horizontal: "LEFT", vertical: "TOP" },
       hidePaper: true,
