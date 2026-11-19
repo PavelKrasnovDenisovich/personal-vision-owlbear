@@ -127,9 +127,11 @@ function render() {
   root.querySelector("#place-light-marker").onclick = async () => {
     const presetId = root.querySelector("#light-preset").value;
     await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PLACE_PRESET_KEY]: { id: presetId, ...LIGHT_PRESETS[presetId] } });
+    // Close the manager before activating the placement mode. Closing a popover
+    // after activation can restore the previous (Move) tool and swallow the click.
+    await OBR.popover.close(`${EXTENSION_ID}/manager`);
     await OBR.tool.activateTool(`${EXTENSION_ID}/gm-tool`);
     await OBR.tool.activateMode(`${EXTENSION_ID}/gm-tool`, PLACE_MODE_ID);
-    await OBR.popover.close(`${EXTENSION_ID}/manager`);
     OBR.notification.show(`Выбран профиль «${LIGHT_PRESETS[presetId].name}». Щёлкните по карте, чтобы поставить источник.`);
   };
   root.querySelector("#preview-current").onclick = async () => {

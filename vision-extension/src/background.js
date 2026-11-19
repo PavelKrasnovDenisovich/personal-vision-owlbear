@@ -9,6 +9,7 @@ const EXIT_POPOVER_ID = `${EXTENSION_ID}/gm-preview-exit`;
 const PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
 const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
+const LIGHT_DATA_KEY = `${EXTENSION_ID}/light-data`;
 const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
 const visionUrl = new URL("./viewer.html", location.href).href;
 
@@ -51,49 +52,77 @@ OBR.onReady(async () => {
       }],
       cursors: [{ cursor: "crosshair", filter: { roles: ["GM"] } }],
       onToolClick: async (context, event) => {
-        const preset = context.metadata?.[PLACE_PRESET_KEY];
+        const toolMetadata = context.metadata?.[PLACE_PRESET_KEY]
+          ? context.metadata
+          : await OBR.tool.getMetadata(TOOL_ID);
+        const preset = toolMetadata?.[PLACE_PRESET_KEY];
         if (!preset) {
           OBR.notification.show("Сначала выберите профиль света в панели «Личный обзор».");
           return false;
         }
-        const dpiValue = Number(await OBR.scene.grid.getDpi());
-        const dpi = dpiValue > 0 ? dpiValue : 70;
-        const marker = buildShape()
-          .shapeType("CIRCLE")
-          .width(Math.max(28, dpi * 0.55))
-          .height(Math.max(28, dpi * 0.55))
-          .fillColor("#f4c45b")
-          .fillOpacity(1)
-          .strokeColor("#513610")
-          .strokeOpacity(1)
-          .strokeWidth(4)
-          .name(`💡 Источник света · ${preset.name}`)
-          .position(event.pointerPosition)
-          .layer("PROP")
-          .visible(true)
-          .locked(false)
-          .disableHit(false)
-          .metadata({ [LIGHT_MARKER_KEY]: true })
-          .build();
+        try {
+          const dpiValue = Number(await OBR.scene.grid.getDpi());
+          const dpi = dpiValue > 0 ? dpiValue : 70;
+          const lightData = {
+            name: `💡 Источник света · ${preset.name}`,
+            presetName: preset.name,
+            brightCells: Number(preset.brightCells) || 0,
+            dimCells: Number(preset.dimCells) || 0,
+            tint: Boolean(preset.tint),
+            marker: true,
+          };
+          const marker = buildShape()
+            .shapeType("CIRCLE")
+            .width(Math.max(42, dpi * 0.85))
+            .height(Math.max(42, dpi * 0.85))
+            .fillColor("#ffd04d")
+            .fillOpacity(1)
+            .strokeColor("#572b00")
+            .strokeOpacity(1)
+            .strokeWidth(6)
+            .name(`💡 Источник света · ${preset.name}`)
+            .position(event.pointerPosition)
+            .layer("DRAWING")
+            .visible(true)
+            .locked(false)
+            .metadata({ [LIGHT_MARKER_KEY]: true, [LIGHT_DATA_KEY]: lightData })
+            .build();
 
-        await OBR.scene.items.addItems([marker]);
-        const metadata = await OBR.scene.getMetadata();
-        const state = metadata[STATE_KEY] || { ambient: "bright", assignments: {}, lights: {} };
-        state.assignments ||= {};
-        state.lights ||= {};
-        state.lights[marker.id] = {
-          name: `Метка света · ${preset.name}`,
-          presetName: preset.name,
-          brightCells: Number(preset.brightCells) || 0,
-          dimCells: Number(preset.dimCells) || 0,
-          tint: Boolean(preset.tint),
-          position: { x: event.pointerPosition.x, y: event.pointerPosition.y },
-          marker: true,
-        };
-        await OBR.scene.setMetadata({ [STATE_KEY]: state });
-        OBR.notification.show(`Источник «${preset.name}» отмечен на карте жёлтым кружком. Его можно выбрать, переместить или удалить стандартными инструментами Owlbear.`);
+          await OBR.scene.items.addItems([marker]);
+          const sceneMetadata = await OBR.scene.getMetadata();
+          const state = sceneMetadata[STATE_KEY] || { ambient: "bright", assignments: {}, lights: {} };
+          state.assignments ||= {};
+          state.lights ||= {};
+          state.lights[marker.id] = {
+            ...lightData,
+            position: { x: event.pointerPosition.x, y: event.pointerPosition.y },
+          };
+          await OBR.scene.setMetadata({ [STATE_KEY]: state });
+          OBR.notification.show(`Источник «${preset.name}» поставлен. На карте должна появиться крупная жёлтая метка; её можно переместить или удалить.`);
+        } catch (error) {
+          console.error("Не удалось поставить источник света", error);
+          OBR.notification.show("Не удалось добавить источник света. Проверь, что сцена загружена и у расширения есть доступ к объектам сцены.");
+        }
         return false;
       },
+    });
+    OBR.scene.items.onChange(async (sceneItems) => {
+      try {
+        const metadata = await OBR.scene.getMetadata();
+        const state = metadata[STATE_KEY];
+        if (!state?.lights) return;
+        const itemIds = new Set(sceneItems.map((item) => item.id));
+        let changed = false;
+        for (const [itemId, light] of Object.entries(state.lights)) {
+          if (light.marker && !itemIds.has(itemId)) {
+            delete state.lights[itemId];
+            changed = true;
+          }
+        }
+        if (changed) await OBR.scene.setMetadata({ [STATE_KEY]: state });
+      } catch (error) {
+        console.warn("Не удалось синхронизировать источники света со сценой", error);
+      }
     });
     return;
   }
