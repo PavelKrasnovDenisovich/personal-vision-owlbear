@@ -1,10 +1,11 @@
-import OBR, { buildImage } from "@owlbear-rodeo/sdk";
+import OBR, { buildShape } from "@owlbear-rodeo/sdk";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
 const TOOL_ID = `${EXTENSION_ID}/gm-tool`;
 const MODAL_ID = `${EXTENSION_ID}/vision-mask`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
+const EXIT_POPOVER_ID = `${EXTENSION_ID}/gm-preview-exit`;
 const PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
 const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
@@ -32,6 +33,7 @@ OBR.onReady(async () => {
         const metadata = await OBR.tool.getMetadata(TOOL_ID);
         if (metadata?.[PREVIEW_ACTIVE_KEY] || context.metadata?.[PREVIEW_ACTIVE_KEY]) {
           await OBR.tool.setMetadata(TOOL_ID, { [PREVIEW_ACTIVE_KEY]: false });
+          await OBR.popover.close(EXIT_POPOVER_ID).catch(() => {});
           await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
           await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
           return false;
@@ -56,11 +58,16 @@ OBR.onReady(async () => {
         }
         const dpiValue = Number(await OBR.scene.grid.getDpi());
         const dpi = dpiValue > 0 ? dpiValue : 70;
-        const marker = buildImage(
-          { width: 64, height: 64, mime: "image/svg+xml", url: new URL("./light-marker.svg", location.href).href },
-          { offset: { x: 0, y: 0 }, dpi },
-        )
-          .name(`Метка света · ${preset.name}`)
+        const marker = buildShape()
+          .shapeType("CIRCLE")
+          .width(Math.max(28, dpi * 0.55))
+          .height(Math.max(28, dpi * 0.55))
+          .fillColor("#f4c45b")
+          .fillOpacity(1)
+          .strokeColor("#513610")
+          .strokeOpacity(1)
+          .strokeWidth(4)
+          .name(`💡 Источник света · ${preset.name}`)
           .position(event.pointerPosition)
           .layer("PROP")
           .visible(true)
@@ -84,7 +91,7 @@ OBR.onReady(async () => {
           marker: true,
         };
         await OBR.scene.setMetadata({ [STATE_KEY]: state });
-        OBR.notification.show(`Источник «${preset.name}» добавлен. Повторный щелчок поставит ещё один; Escape отменит размещение.`);
+        OBR.notification.show(`Источник «${preset.name}» отмечен на карте жёлтым кружком. Его можно выбрать, переместить или удалить стандартными инструментами Owlbear.`);
         return false;
       },
     });

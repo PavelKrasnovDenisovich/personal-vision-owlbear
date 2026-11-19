@@ -3,6 +3,7 @@ import OBR from "@owlbear-rodeo/sdk";
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
+const EXIT_POPOVER_ID = `${EXTENSION_ID}/gm-preview-exit`;
 const canvas = document.querySelector("#vision");
 const displayContext = canvas.getContext("2d", { alpha: true });
 const frameCanvas = document.createElement("canvas");
@@ -116,19 +117,24 @@ async function draw() {
     do {
       drawPending = false;
       const assignment = activeAssignment();
+      const ambient = window.__visionPreviewAmbient ?? sceneState.ambient;
+      const blind = assignment?.mode === "blind";
       const circles = [];
-      if (assignment && assignment.mode !== "blind") {
+      if (assignment && !blind) {
         const scale = Number(await OBR.viewport.getScale()) || 1;
         const radiusFor = (cells) => Math.max(0, Number(cells) || 0) * gridDpi * scale;
         const tokenCenter = await getCenter(assignment.tokenId);
-        if (tokenCenter) {
+        if (tokenCenter && ambient === "dark") {
           const point = await screenPoint(tokenCenter);
           if (point) {
-            if ((window.__visionPreviewAmbient || sceneState.ambient) === "dark") circles.push({ ...point, radius: radiusFor(assignment.darkvisionCells), strength: 0.72, tint: true, vision: true });
-            else circles.push({ ...point, radius: radiusFor(assignment.brightCells), strength: 1 });
+            const darkvisionCells = Number(assignment.darkvisionCells) || 0;
+            circles.push(darkvisionCells > 0
+              ? { ...point, radius: radiusFor(darkvisionCells), strength: 0.72, tint: true, vision: true }
+              : { ...point, radius: radiusFor(0.45), strength: 1, self: true });
           }
         }
         for (const [itemId, light] of Object.entries(sceneState.lights || {})) {
+          if (!sceneItems.some((item) => item.id === itemId)) continue;
           const center = await getCenter(itemId) || light.position || null;
           if (!center) continue;
           const point = await screenPoint(center);
@@ -157,13 +163,16 @@ async function draw() {
       context.clearRect(0, 0, width, height);
       context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
-      context.fillStyle = "rgba(0,0,0,0.97)";
-      context.fillRect(0, 0, width, height);
-      for (const circle of circles.filter((entry) => entry.vision)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-      for (const circle of circles.filter((entry) => entry.vision && entry.tint)) tintCircle(circle);
-      for (const circle of circles.filter((entry) => !entry.vision && entry.light && entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-      for (const circle of circles.filter((entry) => entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-      for (const circle of circles.filter((entry) => entry.tint && !entry.vision)) tintCircle(circle);
+      const masked = Boolean(assignment) && (blind || ambient === "dark");
+      if (masked) {
+        context.fillStyle = "rgba(0,0,0,0.97)";
+        context.fillRect(0, 0, width, height);
+        for (const circle of circles.filter((entry) => entry.vision || entry.self)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
+        for (const circle of circles.filter((entry) => entry.vision && entry.tint)) tintCircle(circle);
+        for (const circle of circles.filter((entry) => entry.light && entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
+        for (const circle of circles.filter((entry) => entry.light && entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
+        for (const circle of circles.filter((entry) => entry.tint && entry.light)) tintCircle(circle);
+      }
       drawLightGuides(circles);
       context.globalCompositeOperation = "source-over";
       displayContext.setTransform(1, 0, 0, 1, 0, 0);
@@ -192,18 +201,25 @@ OBR.onReady(async () => {
   } : null;
   window.__visionPreviewAmbient = isGmPreview && requestedTokenId ? params.get("previewAmbient") : null;
   if (isGmPreview) {
-    const exitButton = document.createElement("button");
-    exitButton.type = "button";
-    exitButton.textContent = "×  Выйти из предпросмотра";
-    exitButton.setAttribute("aria-label", "Выйти из предпросмотра личного обзора");
-    exitButton.style.cssText = "position:fixed;z-index:2147483647;top:16px;left:16px;pointer-events:auto;cursor:pointer;border:2px solid #8be9e2;border-radius:999px;background:#10262a;color:#fff;padding:12px 18px;font:700 15px/1.2 system-ui,sans-serif;box-shadow:0 4px 20px #000a";
-    document.body.append(exitButton);
     const exitPreview = async () => {
       await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [`${EXTENSION_ID}/preview-active`]: false });
+      await OBR.popover.close(EXIT_POPOVER_ID).catch(() => {});
       await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
       await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
     };
-    exitButton.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); exitPreview(); });
+    const exitUrl = new URL("./preview-exit.html", location.href);
+    await OBR.popover.open({
+      id: EXIT_POPOVER_ID,
+      url: exitUrl.href,
+      width: 226,
+      height: 54,
+      anchorReference: "POSITION",
+      anchorPosition: { left: 16, top: 16 },
+      anchorOrigin: { horizontal: "LEFT", vertical: "TOP" },
+      transformOrigin: { horizontal: "LEFT", vertical: "TOP" },
+      hidePaper: true,
+      disableClickAway: true,
+    });
     document.body.tabIndex = -1;
     document.body.focus({ preventScroll: true });
     window.focus();

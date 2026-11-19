@@ -56,7 +56,7 @@ function render() {
   const assignments = Object.entries(roomState.assignments).map(([tokenId, entry]) => {
     const token = tokens.find((item) => item.id === tokenId);
     const player = players.find((item) => item.id === entry.playerId);
-    return `<article class="saved-row"><div class="row-title"><strong>${esc(token?.name || entry.tokenName || "Удалённый токен")}</strong><span>${esc(player ? playerLabel(player) : entry.playerName || "Игрок не в комнате")}</span></div><div class="row-meta">${entry.mode === "blind" ? "Ослеплён" : `Обычное зрение: ${Number(entry.brightCells) || 0} кл. · Тёмное зрение: ${Number(entry.darkvisionCells) || 0} кл.`}</div><div class="row-buttons"><button data-preview-assignment="${esc(tokenId)}">Проверить на себе</button><button data-edit-assignment="${esc(tokenId)}">Изменить</button><button class="danger" data-remove-assignment="${esc(tokenId)}">Отвязать</button></div></article>`;
+    return `<article class="saved-row"><div class="row-title"><strong>${esc(token?.name || entry.tokenName || "Удалённый токен")}</strong><span>${esc(player ? playerLabel(player) : entry.playerName || "Игрок не в комнате")}</span></div><div class="row-meta">${entry.mode === "blind" ? "Ослеплён" : `Тёмное зрение: ${Number(entry.darkvisionCells) || 0} кл. · освещённые зоны не ограничены радиусом токена`}</div><div class="row-buttons"><button data-preview-assignment="${esc(tokenId)}">Проверить на себе</button><button data-edit-assignment="${esc(tokenId)}">Изменить</button><button class="danger" data-remove-assignment="${esc(tokenId)}">Отвязать</button></div></article>`;
   }).join("");
   const lights = Object.entries(roomState.lights).map(([itemId, entry]) => {
     const item = objects.find((candidate) => candidate.id === itemId);
@@ -71,10 +71,10 @@ function render() {
       <label>Игрок<select id="player-select"><option value="">Выбери игрока</option>${playerOptions}</select></label>
       <label>Токен на карте<select id="token-select"><option value="">Выбери токен персонажа</option>${tokenOptions}</select></label>
       <label>Режим зрения<select id="mode-select"><option value="limited">Ограниченный обзор</option><option value="blind">Ослеплён · экран закрыт</option></select></label>
-      <div class="two-fields"><label>Яркий радиус, клетки<input id="bright-range" type="number" min="0" max="200" value="8"></label><label>Тёмное зрение, клетки<input id="dark-range" type="number" min="0" max="200" value="0"></label></div>
+      <label>Радиус тёмного зрения, клетки<input id="dark-range" type="number" min="0" max="200" value="0"></label>
       <button class="primary" id="save-assignment">Привязать / сохранить</button>
       <button id="preview-current">Посмотреть текущий обзор на себе</button>
-      <p class="hint">Выберите токен и радиусы выше. Игрок и сохранение не нужны. В просмотре карта двигается; Escape или повторное нажатие значка расширения вернёт панель.</p>
+      <p class="hint">В освещённой сцене видна вся карта. В темноте видны только световые области; тёмное зрение добавляет приглушённый радиус вокруг токена. Для проверки выберите токен и радиус тёмного зрения. Escape, кнопка выхода или значок расширения вернут панель.</p>
       <div class="saved-list">${assignments || `<div class="empty">Привязок пока нет.</div>`}</div>
     </section>
     <section class="section"><div class="section-head"><div><h2>Источники света</h2><p>Выбери токен или предмет, который несёт свет.</p></div></div>
@@ -103,7 +103,6 @@ function render() {
       playerId,
       playerName: player ? playerLabel(player) : "Игрок",
       mode: root.querySelector("#mode-select").value,
-      brightCells: clamp(root.querySelector("#bright-range").value),
       darkvisionCells: clamp(root.querySelector("#dark-range").value),
     };
     await persist();
@@ -139,13 +138,12 @@ function render() {
     const url = new URL("./viewer.html", location.href);
     url.searchParams.set("previewToken", tokenId);
     url.searchParams.set("previewMode", root.querySelector("#mode-select").value);
-    url.searchParams.set("previewBright", String(clamp(root.querySelector("#bright-range").value)));
     url.searchParams.set("previewDark", String(clamp(root.querySelector("#dark-range").value)));
     url.searchParams.set("previewAmbient", root.querySelector("#ambient-select").value);
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
     await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PREVIEW_ACTIVE_KEY]: true });
     await OBR.popover.close(`${EXTENSION_ID}/manager`);
-    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true });
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
   };
   root.querySelectorAll("[data-preview-assignment]").forEach((button) => button.onclick = async () => {
     const entry = roomState.assignments[button.dataset.previewAssignment];
@@ -154,7 +152,7 @@ function render() {
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
     await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PREVIEW_ACTIVE_KEY]: true });
     await OBR.popover.close(`${EXTENSION_ID}/manager`);
-    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true });
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
   });
   root.querySelectorAll("[data-remove-assignment]").forEach((button) => button.onclick = async () => { delete roomState.assignments[button.dataset.removeAssignment]; await persist(); });
   root.querySelectorAll("[data-remove-light]").forEach((button) => button.onclick = async () => {
@@ -168,7 +166,6 @@ function render() {
     root.querySelector("#token-select").value = button.dataset.editAssignment;
     root.querySelector("#player-select").value = entry.playerId;
     root.querySelector("#mode-select").value = entry.mode;
-    root.querySelector("#bright-range").value = entry.brightCells;
     root.querySelector("#dark-range").value = entry.darkvisionCells;
     root.querySelector("#save-assignment").scrollIntoView({ behavior: "smooth", block: "center" });
   });

@@ -6,6 +6,7 @@ export default {
         main: "index.html",
         background: "background.html",
         viewer: "viewer.html",
+        previewExit: "preview-exit.html",
       },
     },
   },
