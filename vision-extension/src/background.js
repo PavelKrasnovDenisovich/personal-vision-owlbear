@@ -29,6 +29,8 @@ OBR.onReady(async () => {
   let modalOpen = false;
 
   if (role === "GM") {
+    let activeLightGhostId = null;
+    let lastGhostMoveAt = 0;
     await OBR.tool.create({
       id: TOOL_ID,
       icons: [{
@@ -57,6 +59,46 @@ OBR.onReady(async () => {
         filter: { roles: ["GM"] },
       }],
       cursors: [{ cursor: "crosshair", filter: { roles: ["GM"] } }],
+      onActivate: async (context) => {
+        const toolMetadata = context.metadata?.[PLACE_PRESET_KEY]
+          ? context.metadata
+          : await OBR.tool.getMetadata(TOOL_ID);
+        const preset = toolMetadata?.[PLACE_PRESET_KEY];
+        if (!preset) return;
+        const dpiValue = Number(await OBR.scene.grid.getDpi());
+        const size = Math.max(60, (dpiValue > 0 ? dpiValue : 70) * 0.95);
+        const ghost = buildShape()
+          .shapeType("CIRCLE")
+          .width(size)
+          .height(size)
+          .fillColor("#ffd04d")
+          .fillOpacity(0.42)
+          .strokeColor("#fff1a9")
+          .strokeOpacity(1)
+          .strokeWidth(4)
+          .name("Предпросмотр источника света")
+          .position({ x: 0, y: 0 })
+          .layer("PROP")
+          .locked(true)
+          .disableHit(true)
+          .metadata({ [`${EXTENSION_ID}/light-ghost`]: true })
+          .build();
+        await OBR.scene.local.addItems([ghost]);
+        activeLightGhostId = ghost.id;
+      },
+      onToolMove: async (_context, event) => {
+        if (!activeLightGhostId || Date.now() - lastGhostMoveAt < 40) return;
+        lastGhostMoveAt = Date.now();
+        await OBR.scene.local.updateItems([activeLightGhostId], (items) => {
+          for (const item of items) item.position = { x: event.pointerPosition.x, y: event.pointerPosition.y };
+        }).catch((error) => console.warn("Не удалось передвинуть предпросмотр источника света", error));
+      },
+      onDeactivate: async () => {
+        if (!activeLightGhostId) return;
+        const ghostId = activeLightGhostId;
+        activeLightGhostId = null;
+        await OBR.scene.local.deleteItems([ghostId]).catch(() => {});
+      },
       onToolClick: async (context, event) => {
         const toolMetadata = context.metadata?.[PLACE_PRESET_KEY]
           ? context.metadata
@@ -66,6 +108,7 @@ OBR.onReady(async () => {
           OBR.notification.show("Сначала выберите профиль света в панели «Личный обзор».");
           return false;
         }
+        OBR.notification.show(`Щелчок принят. Ставлю источник «${preset.name}»…`);
         try {
           const dpiValue = Number(await OBR.scene.grid.getDpi());
           const dpi = dpiValue > 0 ? dpiValue : 70;
@@ -108,10 +151,10 @@ OBR.onReady(async () => {
             position: { x: event.pointerPosition.x, y: event.pointerPosition.y },
           };
           await OBR.scene.setMetadata({ [STATE_KEY]: state });
-          OBR.notification.show(`Источник «${preset.name}» поставлен. На карте должна появиться крупная жёлтая метка; её можно переместить или удалить.`);
+          OBR.notification.show(`Источник «${preset.name}» поставлен: жёлтая метка добавлена на сцену и появится в списке света.`);
         } catch (error) {
           console.error("Не удалось поставить источник света", error);
-          OBR.notification.show("Не удалось добавить источник света. Проверь, что сцена загружена и у расширения есть доступ к объектам сцены.");
+          OBR.notification.show(`Не удалось поставить свет: ${error?.message || "ошибка Owlbear Rodeo"}`);
         }
         return false;
       },

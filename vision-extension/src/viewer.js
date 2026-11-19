@@ -89,25 +89,37 @@ function tintCircle(circle) {
   context.fill();
 }
 
-function revealToolbarButtons(width, height) {
-  // Owlbear places Move/Select and the drawing tools in a fixed rail on the
-  // right edge of the scene viewport. Cut only the button-sized circles out
-  // of the darkness; broad edge strips reveal large parts of the map.
-  const toolbarX = width - 43;
-  const firstButtonY = 87;
-  const buttonSpacing = 43;
-  const buttonRadius = 19;
+function revealButtons(points, radius) {
   context.save();
   context.globalCompositeOperation = "destination-out";
   context.fillStyle = "#000";
-  for (let index = 0; index < 11; index += 1) {
-    const y = firstButtonY + index * buttonSpacing;
-    if (y - buttonRadius < 0 || y + buttonRadius > height) continue;
+  for (const { x, y } of points) {
+    if (x - radius < 0 || x + radius > window.innerWidth || y - radius < 0 || y + radius > window.innerHeight) continue;
     context.beginPath();
-    context.arc(toolbarX, y, buttonRadius, 0, Math.PI * 2);
+    context.arc(x, y, radius, 0, Math.PI * 2);
     context.fill();
   }
   context.restore();
+}
+
+function revealOwlbearControls(width, height) {
+  // The right tool rail follows the viewport edge. The larger vertical spacing
+  // and exact button centers match Owlbear's current toolbar layout.
+  const rightRail = Array.from({ length: 11 }, (_, index) => ({
+    x: width - 47,
+    y: 81 + index * 47.5,
+  }));
+  // Small controls at the upper corners and the floating bottom asset/tool row.
+  const topControls = [
+    { x: 20, y: 19 }, { x: 62, y: 19 }, { x: 104, y: 19 },
+    { x: width - 47, y: 19 },
+  ];
+  const bottomCount = 9;
+  const bottomTools = Array.from({ length: bottomCount }, (_, index) => ({
+    x: width / 2 + (index - (bottomCount - 1) / 2) * 51,
+    y: height - 27,
+  }));
+  revealButtons([...rightRail, ...topControls, ...bottomTools], 22);
 }
 
 function drawLightGuides(circles) {
@@ -211,7 +223,7 @@ async function draw() {
         for (const circle of circles.filter((entry) => entry.light && entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.light && entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.tint && entry.light)) tintCircle(circle);
-        revealToolbarButtons(width, height);
+        revealOwlbearControls(width, height);
         drawLightGuides(circles);
       } else if (isGmPreview) {
         drawLightGuides(circles);
