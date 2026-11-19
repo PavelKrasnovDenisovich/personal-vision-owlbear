@@ -90,6 +90,7 @@ function render() {
       <label>Уже есть картинка свечи/фонаря? Выберите её<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
       <div class="two-fields"><label>Яркая область, клеток радиус<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Граница тусклого света, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
       <button class="primary" id="save-light">Назначить профиль выбранному объекту</button>
+      <p class="hint">Автоматическая настройка Prop-токена: в расширении Owlbear «Properties / Свойства» добавьте ключ <code>ru.codex.personal-vision/light</code> и значение <code>lantern</code>, <code>torch</code> или <code>candle</code>. Фонарь: яркий радиус 6 клеток, внешний тусклый — 12; факел: 4/8; свеча: 1/2. Профиль читается с токена автоматически, включая его перемещение. Можно вместо слова передать JSON: <code>{"brightCells":6,"dimCells":12}</code>.</p>
       <div class="saved-list">${lights || `<div class="empty">Источников света пока нет.</div>`}</div>
     </section>
     <footer>Настройки хранятся в метаданных текущей сцены. Участники должны открыть комнату с включённым расширением.</footer>

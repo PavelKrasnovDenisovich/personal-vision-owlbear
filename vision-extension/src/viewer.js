@@ -5,6 +5,7 @@ const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const LIGHT_DATA_KEY = `${EXTENSION_ID}/light-data`;
+const LIGHT_PROFILE_KEY = `${EXTENSION_ID}/light`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const EXIT_POPOVER_ID = `${EXTENSION_ID}/gm-preview-exit`;
 const canvas = document.querySelector("#vision");
@@ -89,37 +90,38 @@ function tintCircle(circle) {
   context.fill();
 }
 
-function revealButtons(points, radius) {
+function revealPlate(x, y, width, height) {
   context.save();
   context.globalCompositeOperation = "destination-out";
   context.fillStyle = "#000";
-  for (const { x, y } of points) {
-    if (x - radius < 0 || x + radius > window.innerWidth || y - radius < 0 || y + radius > window.innerHeight) continue;
-    context.beginPath();
-    context.arc(x, y, radius, 0, Math.PI * 2);
-    context.fill();
-  }
+  context.fillRect(x, y, width, height);
   context.restore();
 }
 
 function revealOwlbearControls(width, height) {
-  // The right tool rail follows the viewport edge. The larger vertical spacing
-  // and exact button centers match Owlbear's current toolbar layout.
-  const rightRail = Array.from({ length: 11 }, (_, index) => ({
-    x: width - 47,
-    y: 81 + index * 47.5,
-  }));
-  // Small controls at the upper corners and the floating bottom asset/tool row.
-  const topControls = [
-    { x: 20, y: 19 }, { x: 62, y: 19 }, { x: 104, y: 19 },
-    { x: width - 47, y: 19 },
-  ];
-  const bottomCount = 9;
-  const bottomTools = Array.from({ length: bottomCount }, (_, index) => ({
-    x: width / 2 + (index - (bottomCount - 1) / 2) * 51,
-    y: height - 27,
-  }));
-  revealButtons([...rightRail, ...topControls, ...bottomTools], 22);
+  // Solid transparent plates match Owlbear's floating control surfaces. Small
+  // circular holes drift off target with browser zoom and different layouts.
+  revealPlate(0, 0, Math.min(360, width), Math.min(108, height)); // exit + top-left controls
+  revealPlate(Math.max(0, width - 100), 62, Math.min(100, width), Math.min(570, height - 62)); // right rail
+  revealPlate(Math.max(0, width / 2 - 275), Math.max(0, height - 62), Math.min(550, width), Math.min(62, height)); // bottom tools
+}
+
+function lightFromProfile(value) {
+  const profiles = {
+    candle: { name: "Свеча", brightCells: 1, dimCells: 2 },
+    torch: { name: "Факел", brightCells: 4, dimCells: 8 },
+    lantern: { name: "Фонарь", brightCells: 6, dimCells: 12 },
+  };
+  if (typeof value === "string") {
+    const profileId = value.trim().toLowerCase();
+    if (profiles[profileId]) return profiles[profileId];
+    try { value = JSON.parse(value); } catch { return null; }
+  }
+  if (!value || typeof value !== "object") return null;
+  const brightCells = Number(value.brightCells);
+  const dimCells = Number(value.dimCells);
+  if (!Number.isFinite(brightCells) || !Number.isFinite(dimCells)) return null;
+  return { name: value.name || "Настраиваемый свет", brightCells: Math.max(0, brightCells), dimCells: Math.max(0, dimCells), tint: Boolean(value.tint) };
 }
 
 function drawLightGuides(circles) {
@@ -170,7 +172,7 @@ async function draw() {
           if (point) {
             const darkvisionCells = Number(assignment.darkvisionCells) || 0;
             circles.push(darkvisionCells > 0
-              ? { ...point, radius: radiusFor(darkvisionCells), strength: 0.72, tint: true, vision: true }
+              ? { ...point, radius: radiusFor(darkvisionCells * 1.3), strength: 0.72, tint: true, vision: true }
               : { ...point, radius: radiusFor(0.45), strength: 1, self: true });
           }
         }
@@ -180,6 +182,8 @@ async function draw() {
           if (item.metadata?.[LIGHT_MARKER_KEY] && lightData) {
             lightEntries.set(item.id, { ...lightData, position: item.position, marker: true });
           }
+          const profile = item.layer === "PROP" ? lightFromProfile(item.metadata?.[LIGHT_PROFILE_KEY]) : null;
+          if (profile) lightEntries.set(item.id, { ...profile, position: item.position, marker: true, propLight: true });
         }
         for (const [itemId, light] of lightEntries) {
           const sourceItem = sceneItems.find((item) => item.id === itemId);
