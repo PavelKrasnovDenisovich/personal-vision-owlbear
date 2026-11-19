@@ -1,3 +1,14 @@
-node_modules/
-dist/
-.npm-cache/
+# Node dependencies and generated builds
+**/node_modules/
+**/dist/
+**/.npm-cache/
+
+# Local archives and logs
+*.zip
+*.log
+npm-debug.log*
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/

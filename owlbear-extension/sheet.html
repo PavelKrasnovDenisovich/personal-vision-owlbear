@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171917">
+  <title>Книга партии — заметки ведущего</title>
+  <script>if(new URLSearchParams(location.search).has('item'))document.documentElement.style.visibility='hidden';</script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111311;
+      --panel: #191c19;
+      --panel-soft: #202420;
+      --line: #303630;
+      --muted: #9aa397;
+      --text: #f0f1e9;
+      --accent: #c9e3a1;
+      --accent-ink: #1e2817;
+      --gold: #e5bd77;
+      --blue: #a8c8ec;
+      --rose: #e8a9a1;
+      --shadow: 0 18px 60px #0008;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 75% -10%, #343c2d 0, transparent 34rem), var(--bg); color: var(--text); }
+    button, input, textarea, select { font: inherit; }
+    button { color: inherit; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 272px minmax(0, 1fr); }
+    .sidebar { min-width:0; max-width:272px; overflow:hidden; border-right: 1px solid var(--line); background: #151815ed; padding: 20px 12px; display: flex; flex-direction: column; gap: 20px; }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #667457; border-radius: 12px; background: linear-gradient(145deg,#34402c,#20271d); color: var(--accent); font-size: 20px; }
+    .brand-title { font-size: 14px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .brand-sub { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .side-label { color: #788174; font-size: 10px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; padding: 0 10px; margin-bottom: 8px; }
+    .character-list { display: grid; gap: 5px; min-width:0; width:100%; overflow-x:hidden; }
+    .character-item { display:flex;align-items:center;gap:4px;min-width:0;width:100%;overflow:hidden; }
+    .character-row { min-width:0; flex:1 1 auto; width:0; overflow:hidden; border: 1px solid transparent; background: transparent; padding: 8px 6px; border-radius: 12px; text-align: left; display: flex; gap: 7px; align-items: center; cursor: pointer; transition: .15s ease; }
+    .character-row:hover { background: #ffffff08; }
+    .character-row.active { background: #c9e3a115; border-color: #c9e3a13a; }
+    .avatar { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #30372c; color: var(--accent); font-family: Georgia,serif; font-size: 17px; }
+    .character-name { display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size: 13px; font-weight: 650; }
+    .character-meta { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .row-count { margin-left: auto; color: #929a8e; font-size: 11px; }
+    .character-delete { flex:0 0 25px;width:25px;height:25px;padding:0;border:1px solid #754c42;border-radius:7px;background:#38241f;color:#ffc0b0;cursor:pointer;font-size:12px;font-weight:700;opacity:.82; }
+    .character-delete:hover { background:#62372d;border-color:#c57d68;color:#fff; }
+    .condition { display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap;border:1px solid #9a6b53;background:#38271f;color:#ffc6a8;border-radius:999px;padding:5px 8px;font-size:10px; }
+    .action-groups { display:grid;gap:16px; }
+    .action-group h3 {font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}
+    .side-actions { display: grid; gap: 7px; }
+    .side-bottom { margin-top: auto; border-top: 1px solid var(--line); padding: 16px 5px 0; }
+    .storage-note { font-size: 11px; line-height: 1.55; color: var(--muted); display: flex; gap: 8px; align-items: flex-start; padding: 8px; }
+    .status-dot { margin-top: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px #c9e3a177; flex: 0 0 7px; }
+    .main { min-width: 0; padding: 30px clamp(20px, 5vw, 72px) 56px; max-width: 1500px; width: 100%; margin: 0 auto; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 34px; }
+    .breadcrumb { color: var(--muted); font-size: 12px; }
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+    .search-wrap { position: relative; width: min(360px, 36vw); }
+    .search-wrap input { width: 100%; border: 1px solid var(--line); border-radius: 11px; background: #1b1f1b; color: var(--text); padding: 11px 75px 11px 38px; outline: none; font-size: 12px; }
+    .search-wrap input:focus { border-color: #778568; box-shadow: 0 0 0 3px #c9e3a111; }
+    .search-icon { position: absolute; top: 10px; left: 13px; color: #8e9789; font-size: 14px; pointer-events: none; }
+    .shortcut { position: absolute; right: 9px; top: 8px; border: 1px solid #3b423a; color: #92998f; border-radius: 5px; font-size: 10px; padding: 3px 5px; pointer-events: none; }
+    .icon-button, .button { border: 1px solid var(--line); background: #202420; border-radius: 10px; padding: 10px 12px; font-size: 12px; cursor: pointer; transition: .15s; }
+    .icon-button { width: 39px; height: 39px; padding: 0; display: grid; place-items: center; font-size: 16px; }
+    .button:hover, .icon-button:hover { background: #2b302b; border-color: #4a5546; }
+    .button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 750; }
+    .button.primary:hover { background: #d7ecb5; }
+    .button.ghost { background: transparent; }
+    .button.small { padding: 8px 10px; font-size: 11px; }
+    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 24px; }
+    .eyebrow { color: var(--accent); font-size: 10px; letter-spacing: .17em; font-weight: 750; text-transform: uppercase; margin-bottom: 10px; }
+    h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 500; font-size: clamp(30px,4vw,45px); letter-spacing: -.035em; margin: 0; }
+    .subtitle { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+    .hero-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 24px; overflow-x: auto; }
+    .tab { border: 0; border-bottom: 2px solid transparent; background: transparent; color: #939b90; padding: 13px 15px 12px; cursor: pointer; white-space: nowrap; font-size: 12px; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-count { color: #737c70; margin-left: 5px; font-size: 10px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 28px 0 13px; }
+    .section-head h2 { font-family: Georgia,serif; font-size: 21px; font-weight: 500; margin: 0; }
+    .section-caption { color: var(--muted); font-size: 11px; margin-top: 4px; }
+    .cards { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .record { min-width: 0; border: 1px solid var(--line); background: linear-gradient(140deg,#1c201c,#181b18); border-radius: 14px; overflow: hidden; transition: border-color .15s, transform .15s; }
+    .record:hover { border-color: #4a5447; transform: translateY(-1px); }
+    .record[open] { border-color: #647357; }
+    .record summary { list-style: none; padding: 15px 16px; cursor: pointer; display: grid; grid-template-columns: 4px minmax(0,1fr) auto; gap: 12px; align-items: center; }
+    .record summary::-webkit-details-marker { display: none; }
+    .tier-bar { width: 4px; height: 34px; border-radius: 5px; background: var(--accent); }
+    .tier-bar.gold { background: var(--gold); }.tier-bar.blue { background: var(--blue); }.tier-bar.rose { background: var(--rose); }
+    .record-title { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+    .record-sub { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+    .pill { color: #b9c0b5; background: #ffffff0b; border: 1px solid #ffffff0c; padding: 3px 7px; border-radius: 999px; font-size: 9px; }
+    .pill.tier-low { color: var(--accent); background: #c9e3a111; }.pill.tier-mid { color: var(--blue); background: #a8c8ec11; }.pill.tier-high { color: var(--gold); background: #e5bd7711; }
+    .chevron { color: #879081; transition: transform .15s; font-size: 13px; }
+    .record[open] .chevron { transform: rotate(180deg); }
+    .record-body { padding: 0 17px 16px 32px; color: #c6cbc1; font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+    .record-body:empty { display: none; }
+    .record-note { border-top: 1px solid #ffffff12; margin-top: 12px; padding-top: 10px; color: var(--gold); }
+    .record-footer { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+    .text-button { border: 0; background: transparent; color: #9da697; font-size: 10px; cursor: pointer; padding: 4px 6px; }
+    .text-button:hover { color: var(--accent); }
+    .prose { max-width: 790px; border: 1px solid var(--line); background: #1a1e1a; border-radius: 14px; padding: 22px; color: #d0d4cb; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .prose.empty { color: var(--muted); }
+    .callout { border-left: 2px solid var(--gold); padding: 3px 0 3px 14px; margin: 20px 0; color: #dfc99f; }
+    .empty-state { border: 1px dashed #3b443a; background: #ffffff04; border-radius: 14px; padding: 34px; text-align: center; color: var(--muted); }
+    .empty-state strong { display: block; color: var(--text); font-family: Georgia,serif; font-size: 20px; font-weight: 500; margin-bottom: 8px; }
+    .empty-icon { font-size: 28px; color: var(--accent); margin-bottom: 10px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; margin: 18px 0 26px; }
+    .stat-card { border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(145deg,#20251f,#181b18); padding: 13px 14px; min-width: 0; }
+    .stat-label { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .stat-value { font-family: Georgia,serif; font-size: 25px; margin-top: 5px; }
+    .stat-sub { color: #8b9587; font-size: 10px; margin-top: 3px; }
+    .hp-controls { display:flex;align-items:center;gap:5px;margin-top:8px; }
+    .hp-controls .mini { width:25px;height:24px;padding:0; }
+    .hp-bar { height:4px; background:#343b32; border-radius:5px; margin-top:8px; overflow:hidden; }
+    .hp-bar span { display:block;height:100%;background:linear-gradient(90deg,#a6c77c,#d1e7a9);border-radius:5px; }
+    .attribute-grid { display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px; }
+    .attribute { border:1px solid var(--line);background:#191d19;border-radius:12px;padding:12px;text-align:center; }
+    .attribute-name { color:var(--muted);font-size:9px;letter-spacing:.1em; }
+    .attribute-score { font-family:Georgia,serif;font-size:24px;margin:4px 0; }
+    .attribute-mod { color:var(--accent);font-size:11px; }
+    .attribute-source { color:#7f887c;font-size:9px;line-height:1.45;margin-top:6px;overflow:hidden;max-height:2.8em; }
+    .attribute-actions { display:grid;gap:4px;margin-top:9px; }
+    .attribute-actions button { width:100%;padding:5px 3px;border:1px solid #46513d;border-radius:7px;background:#252b23;color:#dce8cf;font-size:9px;cursor:pointer; }
+    .attribute-actions button:hover { background:#35402e;border-color:#758a5e; }
+    .presentation-card { display:flex;align-items:center;justify-content:space-between;gap:16px;margin:12px 0 18px;padding:15px 17px;border:1px solid #4d5a42;border-radius:13px;background:linear-gradient(135deg,#252d21,#1b201a); }
+    .presentation-card .eyebrow { margin-bottom:6px; }
+    .presentation-card strong { font:600 15px Georgia,serif;color:#e7eddb; }
+    .presentation-card .subtitle { margin:6px 0 0;font-size:11px; }
+    .presentation-actions { display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px; }
+    .presentation-actions button:disabled { opacity:.5;cursor:not-allowed; }
+    .save-proficiency-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px; }
+    .save-proficiency-grid label { display:flex;align-items:center;gap:6px;padding:8px;border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:11px; }
+    .save-proficiency-grid input { accent-color:var(--accent); }
+    .slot-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px; }
+    .slot-card { border:1px solid var(--line);background:#191d19;border-radius:12px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px; }
+    .slot-level { color:var(--muted);font-size:10px; }
+    .slot-count { font-family:Georgia,serif;font-size:19px;margin-top:4px; }
+    .slot-actions { display:flex;gap:5px; }
+    .uses-control { display:flex;align-items:center;gap:8px;color:#cbd1c5;font-size:11px; }
+    .uses-count { min-width:48px;text-align:center;font-variant-numeric:tabular-nums; }
+    .item-flags { display:flex;flex-wrap:wrap;gap:5px;margin-top:6px; }
+    .recovery-bar { display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px; }
+    .source-list { display:grid;gap:7px; }
+    .source-row { display:flex;justify-content:space-between;gap:14px;padding:9px 11px;border-bottom:1px solid #ffffff0c;color:#c5cbc0;font-size:11px; }
+    .source-row span:last-child { color:#929b8d;text-align:right; }
+    .inline-edit { color:var(--accent);border:0;background:transparent;font-size:11px;cursor:pointer; }
+    .battle-layout { display:grid;grid-template-columns:minmax(290px,420px) minmax(240px,1fr);gap:24px;align-items:center;margin:12px 0 28px; }
+    .figure-board { position:relative;min-height:440px;border:1px solid var(--line);border-radius:18px;background:radial-gradient(ellipse at center,#2a3227,#191d19 68%);display:grid;place-items:center;overflow:hidden; }
+    .figure { height:390px;width:220px;filter:drop-shadow(0 0 20px #c9e3a122); }
+    .figure path,.figure circle { fill:#34402f;stroke:#91a47b;stroke-width:2; }
+    .hotspot { position:absolute;z-index:1;border:1px solid #718563;background:#222a20ed;color:var(--accent);border-radius:999px;padding:9px 12px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 5px 16px #0008; }
+    .hotspot:hover { background:#34402d;border-color:var(--accent);transform:scale(1.04); }
+    .hotspot.head { top:8%;left:50%;transform:translateX(-50%); }
+    .hotspot.left-hand { top:31%;left:3%; }.hotspot.right-hand { top:31%;right:3%; }
+    .hotspot.chest { top:44%;left:50%;transform:translateX(-50%); }.hotspot.legs { bottom:12%;left:50%;transform:translateX(-50%); }
+    .hotspot.book { bottom:3%;right:4%;border-radius:12px; }
+    .status-head { position:absolute;top:16%;left:50%;transform:translateX(-50%);display:flex;gap:4px;max-width:90%;flex-wrap:wrap;justify-content:center;z-index:2; }
+    .status-chip { border:1px solid #9a6b53;background:#38271f;color:#ffc6a8;border-radius:999px;padding:4px 7px;font-size:9px; }
+    .quick-hp { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;width:100%;max-width:250px;margin-left:auto;margin-right:auto; }
+    .quick-damage { width:100%;min-width:0;padding:0;border:1px solid #5b4339;background:#2d211d;color:#f0b49a;border-radius:999px;aspect-ratio:1;cursor:pointer;font-weight:750;font-size:11px; }
+    .quick-damage:hover { background:#523128; }
+    .quick-heal { border-color:#57794d;background:#202d1d;color:#c9e3a1; }
+    .quick-heal:hover { background:#30452a; }
+    .hp-mode { display:flex;gap:7px;margin-top:12px; }
+    .hp-mode .selected { border-color:var(--accent);color:var(--accent); }
+    .roll-result { position:fixed;inset:0;z-index:30;background:#0b0d0bf5;display:grid;place-items:center;text-align:center;padding:24px; }
+    .roll-result .die { width:min(250px,58vw);aspect-ratio:1;border-radius:50%;border:5px solid #82976d;background:radial-gradient(circle at 35% 28%,#3a4932,#1a2118 68%);box-shadow:0 0 0 12px #c9e3a11a,0 0 70px #c9e3a133;display:grid;place-items:center;margin:26px auto; }
+    .roll-result .attack-dice { display:flex;align-items:center;justify-content:center;gap:clamp(18px,6vw,72px);margin:22px auto;flex-wrap:wrap; }
+    .roll-result .attack-dice .die { width:min(210px,38vw);margin:8px; }
+    .roll-result .die.critical { border-color:#e5bd77;box-shadow:0 0 0 12px #e5bd7725,0 0 70px #e5bd7770;color:#ffe7ac; }
+    .roll-result .die.fumble { border-color:#d87867;box-shadow:0 0 0 12px #d8786725,0 0 70px #d8786770;color:#ffc0b0; }
+    .roll-result .die.critical .total {color:#ffe7ac}.roll-result .die.fumble .total {color:#ffc0b0}
+    .roll-result .total { font: clamp(72px,16vw,132px) Georgia,serif;color:var(--accent);line-height:1; }
+    .roll-breakdown { display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:600px;margin:0 auto 22px; }
+    .roll-breakdown > div { border:1px solid var(--line);background:#171b17;border-radius:12px;padding:12px;min-width:0; }
+    .roll-breakdown label { display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px; }
+    .roll-result .formula { color:#d1d8ca;font:15px ui-monospace,monospace;overflow-wrap:anywhere; }
+    .roll-result .spell-effect {max-width:720px;margin:14px auto 22px;color:#d2d8ce;font-size:14px;line-height:1.7;white-space:pre-wrap}
+    .roll-result .save-actions { display:flex;justify-content:center;gap:10px;margin:16px; }
+    .action-dialog { width:min(680px,calc(100vw - 26px)); }
+    .action-list { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }
+    .action-entry { border:1px solid var(--line);background:#171b17;border-radius:12px;padding:12px;text-align:left;cursor:pointer; }
+    .action-entry:hover { border-color:#667657; }
+    .action-entry strong {display:block;font-size:12px;margin-bottom:5px}.action-entry span {color:var(--muted);font-size:10px}
+    .quick-spell-row {display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);background:#171b17;border-radius:12px;padding:11px 12px}
+    .quick-spell-row strong {display:block;font-size:12px}.quick-spell-row span {display:block;color:var(--muted);font-size:10px;margin-top:4px}
+    .spell-slot-screen {position:fixed;inset:0;z-index:35;background:#0b0d0bf5;display:grid;place-items:center;padding:20px}
+    .spell-slot-panel {width:min(650px,100%);max-height:100%;overflow:auto;text-align:center;background:#171b17;border:1px solid #414a3c;border-radius:20px;padding:clamp(18px,4vw,32px);box-shadow:0 24px 90px #000b}
+    .spell-slot-panel h2 {font:26px Georgia,serif;margin:0 0 8px}.spell-slot-panel p {color:var(--muted);font-size:12px;margin:0 0 20px}
+    .spell-slot-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .spell-slot-choice {border:1px solid #3a4436;background:#202620;border-radius:14px;padding:15px 8px;cursor:pointer;min-height:92px}
+    .spell-slot-choice:hover:not(:disabled) {border-color:var(--accent);background:#293225}.spell-slot-choice:disabled {opacity:.35;cursor:not-allowed}
+    .spell-slot-choice strong {display:block;font:22px Georgia,serif;color:var(--accent)}.spell-slot-choice span {display:block;color:#c0c8ba;font-size:11px;margin-top:6px}
+    .spell-slot-choice .slot-empty {color:#e6a79a}.spell-slot-panel .button {margin-top:16px}
+    .search-results { display: grid; gap: 8px; }
+    .result-label { color: var(--muted); font-size: 10px; margin-bottom: 7px; }
+    mark { color: #1e2817; background: var(--accent); border-radius: 2px; padding: 0 2px; }
+    .mobile-menu { display: none; }
+    dialog { width: min(560px, calc(100vw - 28px)); max-height: min(88vh, 820px); overflow: auto; border: 1px solid #424a40; border-radius: 18px; padding: 0; color: var(--text); background: #1b1f1b; box-shadow: var(--shadow); }
+    dialog::backdrop { background: #090b09c9; backdrop-filter: blur(3px); }
+    .modal-head { padding: 20px 22px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    .modal-head h2 { font-family: Georgia,serif; font-size: 22px; font-weight: 500; margin: 0; }
+    .modal-body { padding: 20px 22px; display: grid; gap: 14px; }
+    .field { display: grid; gap: 6px; }
+    .field label { color: #adb5a8; font-size: 11px; }
+    .field input, .field select, .field textarea { width: 100%; border: 1px solid #3a4238; border-radius: 9px; outline: 0; background: #131613; color: var(--text); padding: 10px 11px; font-size: 12px; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #82966c; }
+    .field textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+    .field textarea.short { min-height: 72px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-foot { padding: 14px 22px 20px; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); }
+    .modal-foot-right { display: flex; gap: 8px; }
+    .toast { position: fixed; bottom: 22px; left: 50%; transform: translate(-50%,20px); opacity: 0; pointer-events: none; background: #d9ebb9; color: #1e2817; padding: 10px 15px; border-radius: 10px; font-size: 12px; box-shadow: var(--shadow); transition: .2s; z-index: 10; }
+    .toast.show { opacity: 1; transform: translate(-50%,0); }
+    .drop-overlay { display:none;position:fixed;inset:14px;z-index:20;border:2px dashed var(--accent);border-radius:22px;background:#111311e8;backdrop-filter:blur(5px);align-items:center;justify-content:center;text-align:center;color:var(--text);font-family:Georgia,serif;font-size:28px;pointer-events:none; }
+    .drop-overlay.show { display:flex; }
+    @media (max-width: 780px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: fixed; z-index: 5; inset: 0 auto 0 0; width: min(300px,85vw); transform: translateX(-105%); transition: transform .2s; box-shadow: var(--shadow); }
+      .sidebar.open { transform: translateX(0); }
+      .mobile-menu { display: grid; }
+      .main { padding: 18px 18px 40px; }
+      .topbar { margin-bottom: 28px; }
+      .search-wrap { width: min(360px, calc(100vw - 145px)); }
+      .hero { align-items: flex-start; flex-direction: column; }
+      .cards { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .battle-layout { grid-template-columns:1fr; }
+      .figure-board { min-height:400px; }
+      .attribute-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+      .presentation-card { align-items:flex-start;flex-direction:column; }
+      .presentation-actions { justify-content:flex-start; }
+      .hero-actions { width: 100%; }
+      .hero-actions .button { flex: 1; }
+    }
+    @media (max-width: 440px) {
+      .top-actions { gap: 5px; }.search-wrap { width: calc(100vw - 130px); }
+      .search-wrap input { padding-right: 10px; }.shortcut { display: none; }
+      .topbar .icon-button:last-child { display: none; }
+      .form-grid { grid-template-columns: 1fr; }
+      .slot-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .modal-foot { flex-wrap: wrap; }.modal-foot > .button { margin-right: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="brand-mark">✦</div><div><div class="brand-title">Книга партии</div><div class="brand-sub">инструменты ведущего</div></div></div>
+      <div>
+        <div class="side-label">Персонажи <span id="characterCount"></span></div>
+        <select id="factionFilter" class="field" style="width:100%;margin-bottom:8px;background:#131613;color:var(--text);border:1px solid var(--line);padding:9px;border-radius:9px"><option value="">Все фракции</option></select>
+        <div class="character-list" id="characterList"></div>
+        <button class="button ghost small" style="width:100%;margin-top:8px" id="addCharacterSide">＋ Новый персонаж</button>
+      </div>
+      <div class="side-bottom">
+        <div class="side-label">Данные</div>
+        <div class="side-actions">
+          <button class="button ghost small" id="exportButton">⇩　Экспортировать копию</button>
+          <button class="button ghost small" id="importButton">⇧　Импортировать копию</button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden>
+        </div>
+        <div class="storage-note"><span class="status-dot"></span><span>Изменения сохраняются в этом браузере автоматически.</span></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div style="display:flex;align-items:center;gap:10px"><button class="icon-button mobile-menu" id="menuButton" aria-label="Открыть меню">☰</button><div class="breadcrumb">Кампания <span style="color:#596154">/</span> <span id="crumbName">Обзор</span></div></div>
+        <div class="top-actions">
+          <div class="search-wrap"><span class="search-icon">⌕</span><input id="searchInput" type="search" placeholder="Найти персонажа, заклинание…" autocomplete="off"><span class="shortcut">Ctrl ⇧ F</span></div>
+          <button class="icon-button" id="helpButton" title="Подсказки" aria-label="Подсказки">?</button>
+        </div>
+      </header>
+      <div id="content"></div>
+    </main>
+  </div>
+  <dialog id="editorDialog">
+    <form id="editorForm">
+      <div class="modal-head"><h2 id="modalTitle">Новая запись</h2><button type="button" class="icon-button" data-close aria-label="Закрыть">×</button></div>
+      <div class="modal-body" id="modalFields"></div>
+      <div class="modal-foot"><button type="button" class="button ghost" id="deleteButton" hidden>Удалить</button><div class="modal-foot-right"><button type="button" class="button" data-close>Отмена</button><button type="submit" class="button primary">Сохранить</button></div></div>
+    </form>
+  </dialog>
+  <dialog id="actionDialog" class="action-dialog"><div class="modal-head"><h2 id="actionTitle">Действие</h2><button type="button" class="icon-button" data-action-close>×</button></div><div class="modal-body" id="actionBody"></div></dialog>
+  <div class="toast" id="toast"></div>
+  <div class="drop-overlay" id="dropOverlay">Брось сюда JSON-файл карточки<br><span style="font:12px system-ui;color:var(--muted);margin-top:12px">Персонаж добавится или обновится в книге</span></div>
+  <script>
+  (() => {
+    const OWNER_ID = new URLSearchParams(location.search).get('owner') || '';
+    const KEY = OWNER_ID ? `party-book-v1:${encodeURIComponent(OWNER_ID)}` : 'party-book-v1';
+    const OWNER_MIGRATION_KEY = 'party-book-v1-owner-v2';
+    const STATUS_ICONS={blinded:'🚫👁️',charmed:'💗',deafened:'🚫👂',exhaustion:'🥱',frightened:'😨',grappled:'🤼',incapacitated:'🛑',invisible:'👻',paralyzed:'🧊',petrified:'🪨',poisoned:'🐍',prone:'🛌',restrained:'⛓️',stunned:'💫',unconscious:'💤',dead:'💀'};
+    const initial = {
+      selectedId: 'lyra',
+      characters: [{
+        id: 'lyra', name: 'Лира Вейн', subtitle: 'Эльфийка · волшебница 12 ур.', initials: 'ЛВ',
+        stats: { hp:{current:64,max:72,temp:0}, ac:15, initiative:2, speed:30, proficiency:4, spellDC:16, spellAttack:8, passivePerception:13, abilityScores:{str:{score:8,source:'Народ: эльфийка'},dex:{score:14,source:'Базовое значение'},con:{score:14,source:'Повышение характеристик на 4-м уровне'},int:{score:20,source:'Интеллект — основная характеристика волшебника'},wis:{score:12,source:'Базовое значение'},cha:{score:10,source:'Базовое значение'}} },
+        spellSlots: {1:{max:4,remaining:4},2:{max:3,remaining:3},3:{max:3,remaining:3},4:{max:3,remaining:3},5:{max:2,remaining:2},6:{max:1,remaining:1}},
+        backstory: 'Лира выросла в обсерватории на краю Серебряного леса. Её наставник, астромант Эдран, исчез после того, как обнаружил созвездие, которого нет ни в одном звёздном атласе.\n\nЛира покинула башню, чтобы найти его и понять, почему каждую ночь одна и та же звезда становится ярче. Она редко говорит о семье, но хранит старую карту с пометкой: «Когда небо заговорит — не отвечай».',
+        highlights: '• Ищет пропавшего наставника Эдрана\n• Знает тайный знак обсерватории\n• Боится отвечать на зов звёзд',
+        abilities: [
+          { id:'a1', name:'Портент', category:'Особенность школы', tier:'Низкий тир', color:'low', usesMax:2, usesLeft:2, recovery:'long', summary:'После долгого отдыха брось два d20 и запиши результаты. Ты можешь заменить ими бросок атаки, спасбросок или проверку существа, которое видишь.', note:'Помнить про замену до броска куба.' },
+          { id:'a2', name:'Мастер заклинаний', category:'Классовая особенность', tier:'Средний тир', color:'mid', passive:true, summary:'Выбери два заклинания волшебника 1-го уровня и два заклинания 2-го уровня. Их можно накладывать на низшем уровне без траты ячеек, если они подготовлены.' },
+          { id:'a3', name:'Улучшенный портент', category:'Особенность школы', tier:'Высокий тир', color:'high', passive:true, summary:'Когда используешь Портент, можешь выбрать существо, которое видишь. Если оно проваливает спасбросок благодаря заменённому результату, ты восстанавливаешь ячейку заклинания 2-го уровня или ниже.', note:'Сверить формулировку с листом персонажа.' }
+        ],
+        inventory: [
+          {id:'i1',name:'Посох лунного света',category:'Оружие / фокусировка',tier:'Редкий',color:'mid',quantity:1,equipped:true,important:true,summary:'Волшебная фокусировка с гравировкой созвездий.',note:''},
+          {id:'i2',name:'Зелье лечения',category:'Расходуемый предмет',tier:'Обычный',color:'low',quantity:2,equipped:false,important:true,summary:'Восстанавливает 2к4 + 2 хита.',note:'Проверить количество после использования.'}
+        ],
+        spells: [
+          { id:'s1', name:'Контрзаклинание', category:'Прерывание', tier:'3 уровень', color:'mid', summary:'Реакцией прерываешь существо, которое накладывает заклинание в пределах 60 футов. Заклинание 3-го уровня или ниже прерывается автоматически; для более высокого уровня соверши проверку характеристики заклинания.', note:'Реакция — когда видит процесс накладывания.' },
+          { id:'s2', name:'Туманный шаг', category:'Бонусное действие', tier:'2 уровень', color:'low', summary:'Телепортируйся на расстояние до 30 футов в свободное пространство, которое видишь.' },
+          { id:'s3', name:'Расщепление', category:'Действие', tier:'6 уровень', color:'high', effectFormula:'10d6+40', rollEffect:'damage', saveAbility:'Ловкость', saveDC:16, halfOnSave:true, summary:'Цель совершает спасбросок Ловкости против Сл заклинаний. При провале получает 10к6 + 40 урона силовым полем; при успехе — половину. Если урон снижает цель до 0 хитов, она рассыпается в пыль.', note:'Демонстрационная Сл — 16, берётся из показателей Лиры.' },
+          { id:'s4', name:'Щит', category:'Реакция', tier:'1 уровень', color:'low', summary:'До начала следующего хода получаешь +5 к КД, в том числе против вызвавшей реакцию атаки, и не получаешь урон от волшебной стрелы.' }
+        ]
+      }]
+    };
+    let state = loadState();
+    const lastKnownHp = new Map(state.characters.map(character=>[character.id,Number(character.stats?.hp?.current)||0]));
+    let activeTab = 'overview';
+    let searchQuery = '';
+    let editorContext = null;
+    let hpMode='damage';
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const content = $('#content');
+    const esc = (s='') => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const makeId = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now().toString(36)+Math.random().toString(36).slice(2));
+    function ensureCharacter(ch) {
+      ch.abilities ||= []; ch.spells ||= []; ch.inventory ||= []; ch.spellSlots ||= {}; ch.statusEffects ||= [];
+      for(const status of ch.statusEffects)if(STATUS_ICONS[status.id])status.icon=STATUS_ICONS[status.id];
+      ch.stats ||= {};
+      ch.stats.savingThrowProficiencies ||= [];
+      const defaults={hp:{current:0,max:0,temp:0},ac:10,initiative:0,speed:30,proficiency:2,spellDC:10,spellAttack:2,passivePerception:10,abilityScores:{}};
+      for(const [key,value] of Object.entries(defaults))if(ch.stats[key]===undefined||ch.stats[key]===null)ch.stats[key]=value;
+      for(const key of ['current','max','temp'])if(ch.stats.hp[key]===undefined||ch.stats.hp[key]===null)ch.stats.hp[key]=0;
+      for(const key of ['str','dex','con','int','wis','cha']){ch.stats.abilityScores[key] ||= {score:10,source:''};if(ch.stats.abilityScores[key].score==null)ch.stats.abilityScores[key].score=10;if(ch.stats.abilityScores[key].source==null)ch.stats.abilityScores[key].source='';}
+      for(let level=1;level<=9;level++)ch.spellSlots[level] ||= {max:0,remaining:0};
+      for(const a of ch.abilities){if(a.usesMax!=null&&a.usesLeft==null)a.usesLeft=a.usesMax;if(!a.recovery)a.recovery='long';}
+      for(const spell of ch.spells)if(spell.rollEffect==='heal'&&!spell.effectFormula&&spell.rollFormula){spell.effectFormula=spell.rollFormula;spell.rollFormula='';}
+      if(ch.id==='lyra'||ch.name==='Лира Вейн'){
+        if(!ch.abilities.some(a=>a.id==='lyra-attack'))ch.abilities.push({id:'lyra-attack',name:'Атака посохом',category:'Действие · атака',tier:'',color:'low',passive:false,usesMax:0,usesLeft:0,recovery:'manual',rollFormula:'1d20+8',rollEffect:'damage',effectFormula:'1d8+4',summary:'Проверочный пример атаки: бросок атаки, затем урон при попадании.'});
+        if(!ch.abilities.some(a=>a.id==='lyra-second-wind'))ch.abilities.push({id:'lyra-second-wind',name:'Второе дыхание',category:'Бонусное действие',tier:'',color:'mid',passive:false,usesMax:1,usesLeft:1,recovery:'short',rollFormula:'1d10+12',rollEffect:'heal',summary:'Пример способности восстановления HP. Формулу можно изменить в карточке.'});
+        if(!ch.spells.some(s=>s.id==='lyra-cure'))ch.spells.push({id:'lyra-cure',name:'Лечащее слово',category:'Бонусное действие · лечение',tier:'1 уровень',color:'low',effectFormula:'1d4+5',upcastEffectFormula:'1d4',rollEffect:'heal',summary:'Пример заклинания лечения; при накладывании тратит выбранную ячейку.'});
+        const lyraCure=ch.spells.find(s=>s.id==='lyra-cure');if(lyraCure&&!lyraCure.upcastEffectFormula)lyraCure.upcastEffectFormula='1d4';
+        const disintegrate=ch.spells.find(s=>s.id==='s3');if(disintegrate&&!disintegrate.effectFormula)Object.assign(disintegrate,{effectFormula:'10d6+40',rollEffect:'damage',saveAbility:'Ловкость',saveDC:16,halfOnSave:true});
+      }
+      for(const item of ch.inventory){if(item.quantity==null)item.quantity=1;}
+      return ch;
+    }
+    function loadState() {
+      try {
+        const saved=JSON.parse(localStorage.getItem(KEY));
+        if(OWNER_ID){
+          const declinedKey=`${OWNER_MIGRATION_KEY}:declined:${encodeURIComponent(OWNER_ID)}`;
+          const owner=localStorage.getItem(OWNER_MIGRATION_KEY);
+          const legacy=JSON.parse(localStorage.getItem('party-book-v1'));
+          const hasLegacy=legacy&&Array.isArray(legacy.characters)&&legacy.characters.length>0;
+          const hasSaved=saved&&Array.isArray(saved.characters);
+          if(owner===OWNER_ID){
+            if(hasSaved){saved.characters.forEach(ensureCharacter);return saved;}
+            if(hasLegacy){legacy.characters.forEach(ensureCharacter);localStorage.setItem(KEY,JSON.stringify(legacy));return legacy;}
+            return {selectedId:null,characters:[]};
+          }
+          if(!owner&&hasLegacy&&!localStorage.getItem(declinedKey)){
+            const claim=window.confirm('Импортировать старую общую книгу персонажей в эту учётную запись Owlbear? Она будет скопирована только сюда. Если на этом аккаунте нужна новая отдельная книга, нажми «Отмена».');
+            if(claim){
+              localStorage.setItem(OWNER_MIGRATION_KEY,OWNER_ID);
+              const book=hasSaved&&saved.characters.length?saved:legacy;
+              if(!(hasSaved&&saved.characters.length))localStorage.setItem(KEY,JSON.stringify(book));
+              book.characters.forEach(ensureCharacter);return book;
+            }
+            localStorage.setItem(declinedKey,'1');
+          }
+          if(hasSaved){saved.characters.forEach(ensureCharacter);return saved;}
+          return {selectedId:null,characters:[]};
+        }
+        if(saved && Array.isArray(saved.characters)){saved.characters.forEach(ensureCharacter);return saved;}
+      } catch {}
+      if(OWNER_ID)return {selectedId:null,characters:[]};
+      initial.characters.forEach(ensureCharacter);return structuredClone(initial);
+    }
+    function save() {
+      for(const character of state.characters){
+        const hp=character.stats?.hp;
+        if(lastKnownHp.get(character.id)>0&&Number(hp?.current)<=0){
+          character.statusEffects ||= [];
+          if(!character.statusEffects.some(status=>status.id==='dead'))character.statusEffects.push({id:'dead',icon:'💀',name:'Мёртв',duration:'HP достигли 0'});
+        }
+        lastKnownHp.set(character.id,Number(hp?.current)||0);
+      }
+      localStorage.setItem(KEY, JSON.stringify(state));
+      if (window.partyBookIntegrationReady && current()) window.dispatchEvent(new CustomEvent('partybook:changed', {detail: structuredClone(current())}));
+    }
+    function current() { return state.characters.find(c => c.id===state.selectedId) || state.characters[0] || null; }
+    window.addEventListener('storage',event=>{
+      if(event.key!==KEY||!event.newValue)return;
+      try{
+        const fresh=JSON.parse(event.newValue);
+        if(!Array.isArray(fresh.characters))return;
+        fresh.characters.forEach(ensureCharacter);
+        state.characters.splice(0,state.characters.length,...fresh.characters);
+        for(const character of fresh.characters)lastKnownHp.set(character.id,Number(character.stats?.hp?.current)||0);
+        if(fresh.selectedId&&state.characters.some(c=>c.id===fresh.selectedId))state.selectedId=fresh.selectedId;
+        render();
+        if(window.partyBookIntegrationReady&&current())window.dispatchEvent(new CustomEvent('partybook:changed',{detail:structuredClone(current())}));
+      }catch(error){console.warn('Не удалось синхронизировать изменения HP',error)}
+    });
+    function toast(message) { const t=$('#toast'); t.textContent=message; t.classList.add('show'); clearTimeout(toast.timer); toast.timer=setTimeout(()=>t.classList.remove('show'),2200); }
+    function allRecords(ch) { return [...(ch.abilities||[]).map(r=>({...r,section:'Способность',sectionKey:'abilities'})), ...(ch.spells||[]).map(r=>({...r,section:'Заклинание',sectionKey:'spells'})), ...(ch.inventory||[]).map(r=>({...r,section:'Предмет',sectionKey:'inventory'}))]; }
+    function updateSidebar() {
+      $('#characterCount').textContent = state.characters.length ? `· ${state.characters.length}` : '';
+      const filter=$('#factionFilter'),selected=filter.value;const factions=[...new Set(state.characters.map(c=>c.faction).filter(Boolean))].sort();filter.innerHTML='<option value="">Все фракции</option>'+factions.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');filter.value=factions.includes(selected)?selected:'';
+      $('#characterList').innerHTML = state.characters.filter(c=>!filter.value||c.faction===filter.value).map(c => `<div class="character-item"><button class="character-delete" data-delete-character="${esc(c.id)}" title="Удалить ${esc(c.name)}" aria-label="Удалить ${esc(c.name)}">🗑</button><button class="character-row ${c.id===state.selectedId?'active':''}" data-character="${esc(c.id)}"><span class="avatar">${esc(c.initials||c.name.slice(0,1))}</span><span style="min-width:0;flex:1;overflow:hidden"><span class="character-name">${esc(c.name)}</span><span class="character-meta" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.faction||c.subtitle||'Без фракции')}</span></span><span class="row-count">${(c.abilities||[]).length+(c.spells||[]).length}</span></button></div>`).join('');
+      filter.onchange=()=>updateSidebar();
+      $('#characterList').querySelectorAll('[data-character]').forEach(b=>b.addEventListener('click',()=>{state.selectedId=b.dataset.character;activeTab='overview';searchQuery='';$('#searchInput').value='';render();$('#sidebar').classList.remove('open')}));
+      $('#characterList').querySelectorAll('[data-delete-character]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteCharacter(b.dataset.deleteCharacter)}));
+    }
+    function header(title, subtitle, eyebrow='ЛИЧНОЕ ДЕЛО') { const item=activeTab==='inventory';return `<section class="hero"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p class="subtitle">${subtitle}</p></div><div class="hero-actions"><button class="button" data-edit-character>✎　Карточка</button><button class="button primary" ${item?'data-add-item':'data-add-record'}>${item?'＋　Добавить предмет':'＋　Добавить запись'}</button></div></section>`; }
+    function tabs(ch) { const entries=[['overview','Обзор',null],['spells','Заклинания',(ch.spells||[]).length],['abilities','Способности',(ch.abilities||[]).filter(a=>!a.passive).length],['passives','Пассивные и черты',(ch.abilities||[]).filter(a=>a.passive).length],['inventory','Инвентарь',(ch.inventory||[]).length],['backstory','Предыстория',null]]; return `<nav class="tabs">${entries.map(([id,label,count])=>`<button class="tab ${activeTab===id?'active':''}" data-tab="${id}">${label}${count!==null?`<span class="tab-count">${count}</span>`:''}</button>`).join('')}</nav>`; }
+    function recordCard(record, characterId) {
+      const cls=record.color==='high'?'gold':record.color==='mid'?'blue':'';
+      const pill=record.color==='high'?'tier-high':record.color==='mid'?'tier-mid':'tier-low';
+      let control='';
+      if(record.sectionKey==='abilities'&&!record.passive&&Number(record.usesMax)>0){const left=Math.max(0,Number(record.usesLeft??record.usesMax));control=`<div class="record-footer uses-control"><span>Осталось</span><button class="icon-button mini" data-use-delta="1" data-record-id="${esc(record.id)}" aria-label="Потратить использование">−</button><span class="uses-count">${left} / ${Number(record.usesMax)}</span><button class="icon-button mini" data-use-delta="-1" data-record-id="${esc(record.id)}" aria-label="Вернуть использование">＋</button></div>`;}
+      if(record.sectionKey==='spells'){const lvl=Number((String(record.tier||'').match(/\d+/)||[])[0]);if(lvl>0){const available=Object.entries(current()?.spellSlots||{}).filter(([n,v])=>Number(n)>=lvl&&Number(v.remaining)>0).map(([n])=>Number(n));control=`<div class="record-footer"><label class="pill">Ячейкой <select class="slot-select" data-cast-level="${lvl}" data-record-id="${esc(record.id)}">${available.length?available.map(n=>`<option value="${n}">${n}-го уровня</option>`).join(''):`<option value="">Нет ячеек ${lvl}+ уровня</option>`}</select></label><button class="button small" data-cast-spell="${esc(record.id)}" data-character-id="${esc(characterId)}" data-level="${lvl}">Наложить</button></div>`}else if(/заговор/i.test(record.tier||''))control=`<div class="record-footer"><span class="pill tier-low">Без траты ячейки</span></div>`;}
+      if(record.sectionKey==='inventory')control=`<div class="item-flags">${record.equipped?'<span class="pill tier-low">Надет / при себе</span>':''}${record.important?'<span class="pill tier-high">Важный</span>':''}<div class="uses-control"><span>Количество</span><button class="icon-button mini" data-item-delta="-1" data-record-id="${esc(record.id)}">−</button><span class="uses-count">${Number(record.quantity)||0}</span><button class="icon-button mini" data-item-delta="1" data-record-id="${esc(record.id)}">＋</button></div></div>`;
+      return `<details class="record"><summary><span class="tier-bar ${cls}"></span><span><span class="record-title">${esc(record.name)}</span><span class="record-sub"><span class="pill ${pill}">${esc(record.tier||'Без тира')}</span><span class="pill">${esc(record.category||record.section||'Запись')}</span></span></span><span class="chevron">⌄</span></summary><div class="record-body">${esc(record.summary||'Описание пока не добавлено.')}${record.note?`<div class="record-note">Заметка ведущего: ${esc(record.note)}</div>`:''}${control}<div class="record-footer"><button class="text-button" data-edit-record="${esc(record.id)}" data-record-section="${esc(record.sectionKey)}" data-character-id="${esc(characterId)}">Изменить запись　✎</button></div></div></details>`;
+    }
+    function recordGrid(records,ch) { const section=activeTab==='inventory'?'inventory':activeTab==='spells'?'spells':'abilities';return records.length?`<div class="cards">${records.map(r=>recordCard({...r,sectionKey:r.sectionKey||section,section:r.section||({inventory:'Предмет',spells:'Заклинание',abilities:'Способность'}[section])},ch.id)).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">✦</div><strong>Пока здесь пусто</strong>Добавь первую запись — способность, заклинание или заметку.</div>`; }
+    const statNames={str:'СИЛ',dex:'ЛОВ',con:'ТЕЛ',int:'ИНТ',wis:'МДР',cha:'ХАР'};
+    const modifier=n=>{const m=Math.floor((Number(n)-10)/2);return `${m>=0?'+':''}${m}`};
+    function statCard(label,value,sub=''){return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value">${value}</div>${sub?`<div class="stat-sub">${sub}</div>`:''}</div>`}
+    const statFullNames={str:'Сила',dex:'Ловкость',con:'Телосложение',int:'Интеллект',wis:'Мудрость',cha:'Харизма'};
+    function attributeCards(ch){return `<div class="attribute-grid">${Object.entries(statNames).map(([key,label])=>{const a=ch.stats.abilityScores[key]||{score:10,source:''};return `<div class="attribute"><div class="attribute-name">${label}</div><div class="attribute-score">${esc(a.score)}</div><div class="attribute-mod">${modifier(a.score)}</div><div class="attribute-source" title="${esc(a.source||'Источник не указан')}">${esc(a.source||'Источник не указан')}</div><div class="attribute-actions"><button type="button" data-check-roll="${key}" aria-label="Проверка характеристики ${statFullNames[key]}">🎲 Проверка</button><button type="button" data-save-roll="${key}" aria-label="Спасбросок ${statFullNames[key]}">🎲 Спасбросок</button></div></div>`}).join('')}</div>`}
+    function slotCards(ch){const entries=Object.entries(ch.spellSlots||{}).filter(([,v])=>Number(v.max)>0);return entries.length?`<div class="slot-grid">${entries.map(([level,v])=>`<div class="slot-card"><div><div class="slot-level">Ячейки ${level}-го уровня</div><div class="slot-count">${Number(v.remaining)||0} <span style="font-size:12px;color:#84907f">/ ${Number(v.max)||0}</span></div></div><div class="slot-actions"><button class="icon-button mini" data-slot-delta="-1" data-level="${level}" aria-label="Потратить ячейку">−</button><button class="icon-button mini" data-slot-delta="1" data-level="${level}" aria-label="Вернуть ячейку">＋</button></div></div>`).join('')}</div>`:`<div class="empty-state">Ячейки не настроены. Нажми «Настроить ячейки».</div>`}
+    function restButtons(){return `<div class="recovery-bar"><button class="button small" data-rest="short">☾　Короткий отдых · восстановить подходящие способности</button><button class="button small" data-rest="long">✦　Долгий отдых · восстановить всё</button></div>`}
+    function characterView(ch) {
+      let html=header(esc(ch.name),esc(ch.subtitle||'Персонаж кампании'))+tabs(ch);
+      if(activeTab==='overview'){
+        const presentation=ch.presentation;
+        html+=`<section class="presentation-card"><div><div class="eyebrow">СЦЕНА ВЫХОДА</div><strong>${presentation?`GIF персонажа: ${esc(presentation.name||'загружен')}`:'GIF для представления не выбран'}</strong><p class="subtitle">Покажет анимацию игрокам в комнате Owlbear.</p></div><div class="presentation-actions"><button class="button" type="button" data-presentation-upload>Загрузить GIF</button><button class="button primary" type="button" data-presentation-show ${presentation?.url?'':'disabled'}>Представление</button>${presentation?.url?`<button class="button" type="button" data-presentation-remove>Убрать GIF</button>`:''}</div></section>`;
+      }
+      if(activeTab==='backstory') {
+        html+=`<div class="section-head"><div><h2>Предыстория</h2><div class="section-caption">Прошлое персонажа и сюжетные крючки</div></div><button class="button small" data-edit-backstory>✎　Редактировать</button></div>`;
+        html+=ch.backstory?`<div class="prose">${esc(ch.backstory)}</div>`:`<div class="prose empty">Предыстория пока не заполнена. Добавь сюда краткую историю персонажа.</div>`;
+        html+=`<div class="section-head"><div><h2>Важно помнить</h2><div class="section-caption">Факты, которые удобно быстро подсмотреть во время игры</div></div></div><div class="prose ${ch.highlights?'':'empty'}">${esc(ch.highlights||'Добавь ключевые имена, цели, тайны и сюжетные зацепки.')}</div>`;
+      } else if(activeTab==='abilities') {
+        html+=`<div class="section-head"><div><h2>Расходуемые способности</h2><div class="section-caption">Отмечай использования; остаток сохранится автоматически</div></div></div>${restButtons()}${recordGrid((ch.abilities||[]).filter(a=>!a.passive),ch)}`;
+      } else if(activeTab==='passives') {
+        html+=`<div class="section-head"><div><h2>Пассивные особенности</h2><div class="section-caption">Постоянные эффекты и особенности без счётчика использований</div></div></div>${recordGrid((ch.abilities||[]).filter(a=>a.passive),ch)}`;
+        html+=`<div class="section-head"><div><h2>Как получились характеристики</h2><div class="section-caption">Источники бонусов и заметки к шести основным характеристикам</div></div><button class="button small" data-edit-stats>✎　Изменить</button></div>${attributeCards(ch)}`;
+      } else if(activeTab==='spells') {
+        html+=`<div class="section-head"><div><h2>Ячейки заклинаний</h2><div class="section-caption">Остаток ячеек. Нажми минус, чтобы потратить, плюс — чтобы вернуть.</div></div><button class="button small" data-edit-slots>Настроить ячейки</button></div>${slotCards(ch)}`;
+        html+=`<div class="section-head"><div><h2>Книга заклинаний</h2><div class="section-caption">Кнопка в записи тратит ячейку соответствующего уровня</div></div></div>${recordGrid(ch.spells||[],ch)}`;
+      } else if(activeTab==='inventory') {
+        html+=`<div class="section-head"><div><h2>Предметы</h2><div class="section-caption">Надетое, важное и расходуемое; у каждого предмета есть тир и количество</div></div><button class="button small" data-add-item>＋　Добавить предмет</button></div>${recordGrid(ch.inventory||[],ch)}`;
+      } else {
+        const s=ch.stats; const hp=Math.max(0,Number(s.hp.current)||0), max=Math.max(0,Number(s.hp.max)||0), hpPct=max?Math.min(100,hp/max*100):0;
+        html+=`<div class="section-head"><div><h2>Быстрые действия</h2><div class="section-caption">Нажимай на часть фигуры: рука — действие, ноги — перемещение, книга — заклинания</div></div></div>`;
+        html+=`<div class="battle-layout"><div class="figure-board"><svg class="figure" viewBox="0 0 220 420" aria-hidden="true"><circle cx="110" cy="39" r="29"/><path d="M91 70 L129 70 L145 91 L137 204 Q110 218 83 204 L75 91Z"/><path d="M78 82 Q63 85 58 101 L35 185 Q32 197 43 201 Q53 204 58 192 L85 123Z M142 82 Q157 85 162 101 L185 185 Q188 197 177 201 Q167 204 162 192 L135 123Z"/><path d="M86 202 L108 207 L102 345 L78 345Z M112 207 L134 202 L142 345 L118 345Z"/><path d="M78 343 L102 343 L101 389 L72 398 Q64 398 66 390Z M118 343 L142 343 L154 390 Q156 398 148 398 L119 389Z"/></svg><button class="hotspot head" data-hotspot="stats">Голова · статы</button><button class="hotspot left-hand" data-hotspot="action">Левая рука · действие</button><button class="hotspot right-hand" data-hotspot="bonus">Правая рука · бонус</button><button class="hotspot chest" data-hotspot="hp">Торс · HP</button><button class="hotspot legs" data-hotspot="move">Ноги · скорость</button><button class="hotspot book" data-hotspot="spells">📖 Заклинания</button></div><div><div class="section-head"><div><h2>Хиты</h2><div class="section-caption">Выбери режим, затем нажимай кружки</div></div></div><div class="stat-card"><div class="stat-value">${Number(ch.stats.hp.current)||0} <span style="font-size:14px;color:#8d9788">/ ${Number(ch.stats.hp.max)||0}</span></div><div class="hp-mode"><button class="button small ${hpMode==='damage'?'selected':''}" data-hp-mode="damage">Урон</button><button class="button small ${hpMode==='heal'?'selected':''}" data-hp-mode="heal">Лечение</button></div><div class="quick-hp" style="margin-top:12px">${[1,3,5,10,20].map(n=>`<button class="quick-damage ${hpMode==='heal'?'quick-heal':''}" data-quick-hp="${n}">${hpMode==='heal'?'+':'−'}${n}</button>`).join('')}</div><div class="hp-controls"><button class="button small" data-edit-stats>Изменить статы</button></div></div><div class="section-head"><div><h2>Отдых</h2></div></div>${restButtons()}</div></div>`;
+        html+=`<div class="section-head"><div><h2>Основные показатели</h2><div class="section-caption">Быстрые значения персонажа · нажми карандаш, чтобы изменить</div></div><button class="button small" data-edit-stats>✎　Изменить показатели</button></div>`;
+        html+=`<div class="stat-grid"><div class="stat-card"><div class="stat-label">Хиты · HP</div><div class="stat-value">${hp}<span style="font-size:14px;color:#8d9788"> / ${max}</span>${Number(s.hp.temp)>0?` <span style="font-size:12px;color:var(--blue)">+${Number(s.hp.temp)} врем.</span>`:''}</div><div class="hp-bar"><span style="width:${hpPct}%"></span></div><div class="hp-controls"><button class="button small" data-hp-change="damage">− Урон</button><button class="button small" data-hp-change="heal">＋ Лечение</button></div></div>${statCard('Класс брони · AC',esc(s.ac))}${statCard('Инициатива',`${Number(s.initiative)>=0?'+':''}${esc(s.initiative)}`,`Ловкость ${modifier(ch.stats.abilityScores.dex.score)}`)}${statCard('Скорость',`${esc(s.speed)} фт.`)}${statCard('Сл. спасброска · CD',esc(s.spellDC))}${statCard('Атака заклинанием',`+${esc(s.spellAttack)}`)}${statCard('Бонус мастерства',`+${esc(s.proficiency)}`)}${statCard('Пассивная внимательность',esc(s.passivePerception))}</div>`;
+        html+=`<div class="section-head"><div><h2>Характеристики</h2><div class="section-caption">Значение, модификатор и источник — чтобы было понятно, откуда взялась цифра</div></div></div>${attributeCards(ch)}`;
+        html+=`<div class="section-head"><div><h2>Отдых и ресурсы</h2><div class="section-caption">Короткий отдых восстановит отмеченные способности; долгий — все способности и ячейки</div></div></div>${restButtons()}`;
+        html+=`<div class="section-head"><div><h2>Предыстория в двух словах</h2><button class="text-button" data-tab="backstory">Открыть предысторию　→</button></div></div><div class="prose ${ch.highlights?'':'empty'}">${esc(ch.highlights||'Добавь важные детали предыстории персонажа.')}</div>`;
+      }
+      return html;
+    }
+    function searchView(q) {
+      const needle=q.toLocaleLowerCase('ru'); const results=[];
+      for(const ch of state.characters) {
+        if(`${ch.name} ${ch.subtitle}`.toLocaleLowerCase('ru').includes(needle)) results.push({character:ch, title:ch.name, sub:'Персонаж', text:ch.subtitle||'', tab:'overview'});
+        if((ch.backstory||'').toLocaleLowerCase('ru').includes(needle)) results.push({character:ch,title:'Предыстория',sub:ch.name,text:ch.backstory,tab:'backstory'});
+        if((ch.highlights||'').toLocaleLowerCase('ru').includes(needle)) results.push({character:ch,title:'Важное о персонаже',sub:ch.name,text:ch.highlights,tab:'backstory'});
+        for(const r of allRecords(ch)) if(`${r.name} ${r.category} ${r.tier} ${r.summary} ${r.note}`.toLocaleLowerCase('ru').includes(needle)) results.push({character:ch,title:r.name,sub:`${ch.name} · ${r.section} · ${r.tier||'без тира'}`,text:r.summary||'',tab:r.sectionKey==='abilities'&&r.passive?'passives':r.sectionKey,record:r});
+      }
+      const highlighted=s=>{ const i=s.toLocaleLowerCase('ru').indexOf(needle); if(i<0)return esc(s.slice(0,180)); return `${esc(s.slice(0,i))}<mark>${esc(s.slice(i,i+needle.length))}</mark>${esc(s.slice(i+needle.length,i+needle.length+140))}`; };
+      return `<div class="hero"><div><div class="eyebrow">ПОИСК ПО КАМПАНИИ</div><h1>Результаты</h1><p class="subtitle">${results.length} совпадений по запросу «${esc(q)}»</p></div></div>${results.length?`<div class="search-results">${results.map(x=>`<button class="record" style="text-align:left;color:inherit;cursor:pointer;padding:15px 17px" data-search-result="${esc(x.character.id)}" data-result-tab="${x.tab}" data-result-record="${x.record?esc(x.record.id):''}"><div class="result-label">${esc(x.sub)}</div><div class="record-title">${esc(x.title)}</div><div style="color:#abb2a7;font-size:11px;line-height:1.6;margin-top:7px">${highlighted(x.text)}</div></button>`).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">⌕</div><strong>Ничего не найдено</strong>Попробуй другое слово или часть названия.</div>`}`;
+    }
+    function welcome() { return `<section style="max-width:700px;margin:10vh auto;text-align:center"><div class="brand-mark" style="margin:0 auto 20px;width:52px;height:52px;font-size:25px">✦</div><div class="eyebrow">КНИГА ПАРТИИ</div><h1>Под рукой во время игры</h1><p class="subtitle" style="line-height:1.8;margin:14px auto 24px;max-width:480px">Создай карточку персонажа и собери в одном месте его предысторию, способности и заклинания. Всё сохраняется автоматически.</p><button class="button primary" data-add-character>＋　Создать первого персонажа</button></section>`; }
+    function render() {
+      updateSidebar(); const ch=current(); $('#crumbName').textContent=searchQuery?'Поиск':ch?.name||'Обзор';
+      content.innerHTML=searchQuery.trim()?searchView(searchQuery.trim()):ch?characterView(ch):welcome();
+      const board=content.querySelector('.figure-board');if(board&&ch){const status=document.createElement('button');status.className='status-head';status.setAttribute('aria-label','Статусные эффекты');status.innerHTML=(ch.statusEffects||[]).length?ch.statusEffects.map(s=>`<span class="condition">${esc(s.icon||'🔸')} ${esc(s.name)}</span>`).join(''):'<span class="condition">＋ Статусы</span>';status.onclick=()=>openHotspot('status');board.append(status)}
+      content.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{activeTab=b.dataset.tab;searchQuery='';$('#searchInput').value='';render()}));
+      content.querySelectorAll('[data-add-character]').forEach(b=>b.addEventListener('click',()=>openCharacterEditor()));
+      content.querySelectorAll('[data-add-record]').forEach(b=>b.addEventListener('click',()=>openRecordEditor()));
+      content.querySelectorAll('[data-add-item]').forEach(b=>b.addEventListener('click',()=>openRecordEditor(current(),'inventory')));
+      content.querySelectorAll('[data-edit-character]').forEach(b=>b.addEventListener('click',()=>openCharacterEditor(current())));
+      content.querySelectorAll('[data-edit-backstory]').forEach(b=>b.addEventListener('click',()=>openBackstoryEditor(current())));
+      content.querySelectorAll('[data-edit-stats]').forEach(b=>b.addEventListener('click',()=>openStatsEditor(current())));
+      content.querySelectorAll('[data-edit-slots]').forEach(b=>b.addEventListener('click',()=>openSlotsEditor(current())));
+      content.querySelectorAll('[data-hotspot]').forEach(b=>b.addEventListener('click',()=>openHotspot(b.dataset.hotspot)));
+      content.querySelectorAll('[data-save-roll]').forEach(b=>b.addEventListener('click',()=>{const key=b.dataset.saveRoll,ch=current(),base=Number(modifier(ch.stats.abilityScores[key].score)),proficient=(ch.stats.savingThrowProficiencies||[]).includes(key),bonus=base+(proficient?(Number(ch.stats.proficiency)||0):0);rollAndShow(`${statFullNames[key]} · спасбросок`,`1d20${bonus>=0?'+':''}${bonus}`)}));
+      content.querySelectorAll('[data-check-roll]').forEach(b=>b.addEventListener('click',()=>{const key=b.dataset.checkRoll,ch=current(),bonus=Number(modifier(ch.stats.abilityScores[key]?.score??10));rollAndShow(`${statFullNames[key]} · проверка`,`1d20${bonus>=0?'+':''}${bonus}`)}));
+      content.querySelectorAll('[data-hp-mode]').forEach(b=>b.addEventListener('click',()=>{hpMode=b.dataset.hpMode;render()}));
+      content.querySelectorAll('[data-quick-hp]').forEach(b=>b.addEventListener('click',()=>hpMode==='heal'?applyHealing(Number(b.dataset.quickHp)):applyDamage(Number(b.dataset.quickHp))));
+      content.querySelectorAll('[data-edit-record]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const ch=state.characters.find(c=>c.id===b.dataset.characterId);openRecordEditor(ch,b.dataset.recordSection,b.dataset.editRecord)}));
+      content.querySelectorAll('[data-use-delta]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const a=current().abilities.find(x=>x.id===b.dataset.recordId);if(!a)return;const n=Math.max(0,Math.min(Number(a.usesMax),Number(a.usesLeft??a.usesMax)-Number(b.dataset.useDelta)));a.usesLeft=n;save();render()}));
+      content.querySelectorAll('[data-item-delta]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const i=current().inventory.find(x=>x.id===b.dataset.recordId);if(!i)return;i.quantity=Math.max(0,(Number(i.quantity)||0)+Number(b.dataset.itemDelta));save();render()}));
+      content.querySelectorAll('[data-slot-delta]').forEach(b=>b.addEventListener('click',()=>{const slot=current().spellSlots[b.dataset.level];if(!slot)return;slot.remaining=Math.max(0,Math.min(Number(slot.max),Number(slot.remaining)+Number(b.dataset.slotDelta)));save();render()}));
+      content.querySelectorAll('[data-cast-spell]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const select=content.querySelector(`[data-cast-level][data-record-id="${CSS.escape(b.dataset.castSpell)}"]`);const level=Number(select?.value);const slot=current().spellSlots[level];if(!slot||Number(slot.remaining)<1){toast('Нет подходящей свободной ячейки');return}slot.remaining--;const spell=current().spells.find(x=>x.id===b.dataset.castSpell);const scaledEffect=scaledSpellEffectFormula(spell,level);save();if(spell?.saveAbility&&scaledEffect)showSpellSave({...spell,effectFormula:scaledEffect});else if(spell?.rollFormula||scaledEffect)rollAndShow(spell.name,spell.rollFormula||scaledEffect,spell.rollEffect||'none',spell.rollFormula?scaledEffect:'');else{render();toast(`Потрачена ячейка ${level}-го уровня`)}}));
+      content.querySelectorAll('[data-hp-change]').forEach(b=>b.addEventListener('click',()=>{const amount=Number(prompt(b.dataset.hpChange==='damage'?'Сколько урона получил персонаж?':'Сколько HP восстановить?','1'));if(!Number.isFinite(amount)||amount<=0)return;const hp=current().stats.hp;if(b.dataset.hpChange==='damage'){const absorbed=Math.min(Number(hp.temp)||0,amount);hp.temp=(Number(hp.temp)||0)-absorbed;hp.current=Math.max(0,Number(hp.current)-(amount-absorbed))}else hp.current=Math.min(Number(hp.max),Number(hp.current)+amount);save();render();toast('Хиты обновлены')}));
+      content.querySelectorAll('[data-rest]').forEach(b=>b.addEventListener('click',()=>recover(current(),b.dataset.rest)));
+      content.querySelectorAll('[data-presentation-upload]').forEach(b=>b.addEventListener('click',()=>window.partyBookPresentation?.upload(current().id)));
+      content.querySelectorAll('[data-presentation-show]').forEach(b=>b.addEventListener('click',()=>window.partyBookPresentation?.show(current().id)));
+      content.querySelectorAll('[data-presentation-remove]').forEach(b=>b.addEventListener('click',()=>{if(!confirm(`Убрать GIF из карточки «${current().name}»?`))return;window.partyBookApp.setPresentation(current().id,null);toast('GIF убран');render()}));
+      content.querySelectorAll('[data-search-result]').forEach(b=>b.addEventListener('click',()=>{state.selectedId=b.dataset.searchResult;activeTab=b.dataset.resultTab;searchQuery='';$('#searchInput').value='';render();if(b.dataset.resultRecord){const d=[...content.querySelectorAll('.record')].find(el=>el.querySelector(`[data-edit-record="${CSS.escape(b.dataset.resultRecord)}"]`));if(d)d.open=true}}));
+    }
+    function recover(ch,type){
+      const label=type==='short'?'короткого':'долгого';if(!confirm(`Отметить ${label} отдых и восстановить подходящие ресурсы персонажа «${ch.name}»?`))return;
+      for(const a of ch.abilities||[])if(!a.passive&&Number(a.usesMax)>0&&(type==='long'||a.recovery==='short'))a.usesLeft=Number(a.usesMax);
+      if(type==='long'){for(const slot of Object.values(ch.spellSlots||{}))slot.remaining=Number(slot.max)||0;ch.stats.hp.current=Number(ch.stats.hp.max)||0;}
+      save();render();toast(type==='long'?'Долгий отдых: ресурсы восстановлены':'Короткий отдых: способности восстановлены');
+    }
+    function applyDamage(amount){const hp=current().stats.hp;const absorbed=Math.min(Number(hp.temp)||0,amount);hp.temp=(Number(hp.temp)||0)-absorbed;hp.current=Math.max(0,Number(hp.current)-(amount-absorbed));save();render();toast(`−${amount} HP`)}
+    function applyHealing(amount){const hp=current().stats.hp;hp.current=Math.min(Number(hp.max),Number(hp.current)+amount);save();render();toast(`+${amount} HP`)}
+    function scaledSpellEffectFormula(spell,slotLevel){const base=String(spell.effectFormula||'').trim(),increment=String(spell.upcastEffectFormula||'').trim(),baseLevel=Number((String(spell.tier||'').match(/\d+/)||[])[0])||0,extra=Math.max(0,Number(slotLevel)-baseLevel);return base+[...Array(extra)].map(()=>increment).filter(Boolean).map(x=>`+${x}`).join('')}
+    function rollDice(formula){const normalized=String(formula).replace(/[кК]/g,'d').replace(/\s/g,'');const terms=normalized.match(/[+-]?\d*d\d+|[+-]?\d+/gi);if(!terms||terms.join('')!==normalized)throw Error('Формула броска некорректна');let total=0,natural=null;const rolls=[];for(const term of terms){const m=term.match(/^([+-]?)(\d*)d(\d+)$/i);if(m){const sign=m[1]==='-'?-1:1,n=Number(m[2]||1),sides=Number(m[3]);const dice=Array.from({length:n},()=>1+Math.floor(Math.random()*sides));if(sides===20&&n===1)natural=dice[0];total+=sign*dice.reduce((a,b)=>a+b,0);rolls.push(`${sign<0?'-':''}[${dice.join(', ')}]`)}else{total+=Number(term);rolls.push(term)}}return {total,rolls:rolls.join(' '),natural}}
+    function doubleDamageDice(formula){return String(formula||'').replace(/[кК]/g,'d').replace(/([+-]?)(\d*)d(\d+)/gi,(_,sign,count,sides)=>`${sign}${(Number(count)||1)*2}d${sides}`)}
+    function mountActionOverlay(screen,returnToActions=false){const dlg=$('#actionDialog');(returnToActions&&dlg.open?dlg:document.body).append(screen)}
+    function resumeActions(){const dlg=$('#actionDialog');if(!dlg.open)dlg.showModal()}
+    function rollAndShow(name,formula,effect='none',effectFormula='',extraFormula='',returnToActions=false,applyHealingToSelf=true,description=''){try{const roll=rollDice(formula);const critical=effect==='damage'&&roll.natural===20;if(critical){effectFormula=doubleDamageDice(effectFormula);extraFormula=doubleDamageDice(extraFormula)}const eff=effectFormula?rollDice(effectFormula):null,extra=extraFormula?rollDice(extraFormula):null;if(effect==='heal'&&applyHealingToSelf)applyHealing(Math.max(0,eff?.total??roll.total));const screen=document.createElement('div');screen.className='roll-result';screen.innerHTML=`<div><div>${esc(name)}</div>${description?`<div class="spell-effect">${esc(description)}</div>`:''}<div class="attack-dice"><div><div class="die ${roll.natural===20?'critical':roll.natural===1?'fumble':''}"><div class="total">${roll.total}</div></div><label>Бросок ${roll.natural===20?' · КРИТИЧЕСКИЙ УСПЕХ':roll.natural===1?' · ЕСТЕСТВЕННАЯ ЕДИНИЦА':''}</label><div class="formula">${esc(formula)} · ${esc(roll.rolls)}</div></div>${eff||extra?`<div><div class="die ${critical?'critical':''}"><div class="total">${(eff?.total||0)+(extra?.total||0)}</div></div><label>${effect==='heal'?'Лечение':effect==='damage'?'Урон цели':'Результат эффекта'}${critical?' · КРИТИЧЕСКИЙ УРОН':''}</label>${eff?`<div class="formula">Эффект ${eff.total}: ${esc(effectFormula)} ${esc(eff.rolls)}</div>`:''}${extra?`<div class="formula">Доп. урон ${extra.total}: ${esc(extraFormula)} ${esc(extra.rolls)}</div>`:''}</div>`:''}</div><button class="button primary">Продолжить</button></div>`;mountActionOverlay(screen,returnToActions);screen.querySelector('button').onclick=()=>{screen.remove();if(returnToActions)resumeActions()}}catch(e){alert(e.message)}}
+    function showSpellSave(spell,returnToActions=false){try{const damage=rollDice(spell.effectFormula);const screen=document.createElement('div');screen.className='roll-result';screen.innerHTML=`<div><div>${esc(spell.name)} · спасбросок ${esc(spell.saveAbility)}</div>${spell.summary?`<div class="spell-effect">${esc(spell.summary)}</div>`:''}<div class="die"><div class="total">${damage.total}</div></div><div class="roll-breakdown"><div><label>Урон при провале</label><div class="formula">${damage.total}<br>${esc(spell.effectFormula)} · ${esc(damage.rolls)}</div></div><div><label>Сл спасброска</label><div class="formula">${esc(spell.saveDC??current().stats.spellDC)}</div></div></div><div class="save-actions"><button class="button primary" data-save-success>Цель преуспела · половина</button><button class="button" data-save-fail>Цель провалила · полный урон</button></div><button class="button ghost" data-save-close>Закрыть</button></div>`;mountActionOverlay(screen,returnToActions);screen.querySelector('[data-save-success]').onclick=()=>{showEffectOutcome(spell,Math.floor(damage.total/2),'Успешный спасбросок · половина урона',returnToActions)};screen.querySelector('[data-save-fail]').onclick=()=>showEffectOutcome(spell,damage.total,'Провал спасброска · полный урон',returnToActions);screen.querySelector('[data-save-close]').onclick=()=>{screen.remove();if(returnToActions)resumeActions()}}catch(e){alert(e.message)}}
+    function showEffectOutcome(spell,amount,label,returnToActions=false){const screen=document.querySelector('.roll-result');screen.innerHTML=`<div><div>${esc(label)}</div>${spell.summary?`<div class="spell-effect">${esc(spell.summary)}</div>`:''}<div class="die"><div class="total">${amount}</div></div><div class="formula">${esc(spell.name)} · ${esc(spell.effectFormula)}</div><button class="button primary">Продолжить</button></div>`;screen.querySelector('button').onclick=()=>{screen.remove();if(returnToActions)resumeActions()}}
+    function showSpellDescription(spell,returnToActions=false){const screen=document.createElement('div');screen.className='roll-result';screen.innerHTML=`<div><div>${esc(spell.name)}</div><div class="spell-effect">${esc(spell.summary||spell.note||'Описание заклинания пока не добавлено.')}</div><button class="button primary">Продолжить</button></div>`;mountActionOverlay(screen,returnToActions);screen.querySelector('button').onclick=()=>{screen.remove();if(returnToActions)resumeActions()}}
+    function castSpellAtLevel(spellId,level,returnToActions=false,healSelf=true){const spell=current()?.spells.find(x=>x.id===spellId);if(!spell)return;const scaledEffect=level?scaledSpellEffectFormula(spell,level):String(spell.effectFormula||'').trim();if(level){const slot=current().spellSlots[level];if(!slot||Number(slot.remaining)<1){toast('Эти ячейки уже потрачены');return}slot.remaining--}save();if(spell.saveAbility&&scaledEffect)showSpellSave({...spell,effectFormula:scaledEffect},returnToActions);else if(spell.rollFormula||scaledEffect)rollAndShow(spell.name,spell.rollFormula||scaledEffect,spell.rollEffect||'none',spell.rollFormula?scaledEffect:'','',returnToActions,healSelf,spell.summary||spell.note||'');else showSpellDescription(spell,returnToActions)}
+    function showSpellSlotPicker(spell,healSelf=true){const baseLevel=Number((String(spell.tier||'').match(/\d+/)||[])[0])||0;const overlay=document.createElement('div');overlay.className='spell-slot-screen';overlay.innerHTML=`<div class="spell-slot-panel"><h2>Выбери ячейку</h2><p>${esc(spell.name)} · доступно ${baseLevel}–9 уровень</p><div class="spell-slot-grid">${Array.from({length:9},(_,i)=>{const level=i+1,slot=current().spellSlots[level]||{max:0,remaining:0},max=Number(slot.max)||0,left=Number(slot.remaining)||0,disabled=level<baseLevel||max<1||left<1;return `<button class="spell-slot-choice" data-slot-level="${level}" ${disabled?'disabled':''}><strong>${level}</strong><span>Уровень · ${left} / ${max} осталось</span></button>`}).join('')}</div><button class="button ghost" data-slot-cancel>Отмена</button></div>`;mountActionOverlay(overlay,true);overlay.querySelector('[data-slot-cancel]').onclick=()=>overlay.remove();overlay.querySelectorAll('[data-slot-level]').forEach(button=>button.onclick=()=>{const level=Number(button.dataset.slotLevel);overlay.remove();castSpellAtLevel(spell.id,level,true,healSelf)})}
+    function chooseHealingTarget(spell){const overlay=document.createElement('div');overlay.className='spell-slot-screen';overlay.innerHTML=`<div class="spell-slot-panel"><h2>Кого лечим?</h2><p>${esc(spell.name)} · выбери цель заклинания</p><div class="spell-slot-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button class="spell-slot-choice" data-heal-self><strong>✦</strong><span>На себя · применить лечение к HP</span></button><button class="spell-slot-choice" data-heal-other><strong>＋</strong><span>На другого · только показать бросок</span></button></div><button class="button ghost" data-heal-cancel>Отмена</button></div>`;mountActionOverlay(overlay,true);overlay.querySelector('[data-heal-cancel]').onclick=()=>overlay.remove();overlay.querySelector('[data-heal-self]').onclick=()=>{overlay.remove();continueSpellCast(spell,true)};overlay.querySelector('[data-heal-other]').onclick=()=>{overlay.remove();continueSpellCast(spell,false)}}
+    function continueSpellCast(spell,healSelf){const tier=String(spell.tier||'').toLowerCase(),level=Number((tier.match(/\d+/)||[])[0])||0;if(/заговор|cantrip/.test(tier)||level===0){castSpellAtLevel(spell.id,null,true,healSelf);return}showSpellSlotPicker(spell,healSelf)}
+    function openHotspot(kind){
+      const ch=current(),dlg=$('#actionDialog'),title=$('#actionTitle'),body=$('#actionBody');
+      const names={stats:'Показатели персонажа',action:'Действие',bonus:'Бонусное действие',move:'Перемещение',hp:'Урон по HP',spells:'Заклинания',status:'Статусные эффекты'};title.textContent=names[kind]||'Действие';
+      if(kind==='status'){const catalog=[['blinded','🚫👁️','Ослеплён'],['charmed','💗','Очарован'],['deafened','🚫👂','Оглох'],['exhaustion','🥱','Истощение'],['frightened','😨','Испуган'],['grappled','🤼','Схвачен'],['incapacitated','🛑','Недееспособен'],['invisible','👻','Невидим'],['paralyzed','🧊','Парализован'],['petrified','🪨','Окаменел'],['poisoned','🐍','Отравлен'],['prone','🛌','Сбит с ног'],['restrained','⛓️','Опутан'],['stunned','💫','Ошеломлён'],['unconscious','💤','Без сознания'],['dead','💀','Мёртв']];body.innerHTML=`<div class="action-list">${catalog.filter(x=>!(ch.statusEffects||[]).some(s=>s.id===x[0])).map(x=>`<button class="action-entry" data-add-condition="${x[0]}"><strong>${x[1]} ${x[2]}</strong><span>Наложить на персонажа</span></button>`).join('')}</div><h3>Сейчас наложены · нажми, чтобы снять</h3><div class="action-list">${(ch.statusEffects||[]).map((s,i)=>`<button class="action-entry" data-remove-status="${i}"><strong>${esc(s.icon||'🔸')} ${esc(s.name)}</strong><span>${esc(s.duration||s.summary||'Активен')} · нажми, чтобы снять</span></button>`).join('')||'<span class="subtitle">Активных эффектов нет</span>'}</div>`;body.querySelectorAll('[data-add-condition]').forEach(b=>b.onclick=()=>{ch.statusEffects||=[];const c=catalog.find(x=>x[0]===b.dataset.addCondition);ch.statusEffects.push({id:c[0],icon:c[1],name:c[2],duration:'Активен'});save();dlg.close();render()});body.querySelectorAll('[data-remove-status]').forEach(b=>b.onclick=()=>{ch.statusEffects.splice(Number(b.dataset.removeStatus),1);save();dlg.close();render()});dlg.showModal();return;}
+      if(kind==='stats'){body.innerHTML=`<div class="stat-grid">${statCard('AC',ch.stats.ac)}${statCard('CD заклинаний',ch.stats.spellDC)}${statCard('Скорость',`${ch.stats.speed} фт.`)}${statCard('Инициатива',ch.stats.initiative)}</div><button class="button small" data-hotspot-edit>Изменить показатели</button>`;body.querySelector('[data-hotspot-edit]').onclick=()=>{dlg.close();openStatsEditor(ch)};}
+      else if(kind==='hp'){body.innerHTML=`<p class="subtitle">Выбери урон: он отнимется от временных HP, затем от обычных.</p><div class="quick-hp">${[1,3,5,10,20].map(n=>`<button class="quick-damage" data-dialog-damage="${n}">−${n}</button>`).join('')}</div>`;body.querySelectorAll('[data-dialog-damage]').forEach(b=>b.onclick=()=>{dlg.close();applyDamage(Number(b.dataset.dialogDamage))});}
+      else if(kind==='spells'){const spells=ch.spells||[];body.innerHTML=spells.length?`<div class="action-groups">${spells.map(spell=>{return `<div class="quick-spell-row"><div><strong>${esc(spell.name)}</strong><span>${esc(spell.tier||'Заговор')}${spell.category?` · ${esc(spell.category)}`:''}</span></div><button class="button primary small" data-quick-spell="${esc(spell.id)}">Использовать</button></div>`}).join('')}</div>`:'<div class="empty-state">У персонажа пока нет заклинаний.</div>';body.querySelectorAll('[data-quick-spell]').forEach(button=>button.onclick=()=>{const spell=ch.spells.find(x=>x.id===button.dataset.quickSpell);if(!spell)return;if(spell.rollEffect==='heal'){chooseHealingTarget(spell);return}continueSpellCast(spell,true)})}
+      else if(kind==='move'){body.innerHTML=`<div class="stat-card"><div class="stat-label">Скорость</div><div class="stat-value">${esc(ch.stats.speed)} фт.</div></div><button class="button small" data-move-edit>Редактировать скорость</button>`;body.querySelector('[data-move-edit]').onclick=()=>{dlg.close();openStatsEditor(ch)};}
+      else {const records=(ch.abilities||[]).filter(a=>!a.passive);const term=kind==='bonus'?/бонус|дополнительн/i:/действие|атака|action/i;const found=records.filter(a=>term.test(`${a.category||''} ${a.activation||''}`));const items=found.length?found:records;const rolled=items.filter(a=>a.rollFormula||a.effectFormula),plain=items.filter(a=>!a.rollFormula&&!a.effectFormula);const group=arr=>`<div class="action-group"><h3>${arr===rolled?'С броском':'Без броска'}</h3><div class="action-list">${arr.map(a=>`<button class="action-entry" data-ability-detail="${esc(a.id)}"><strong>${esc(a.name)}</strong><span>${esc(a.category||a.tier||'Способность')} ${a.rollFormula?`· ${esc(a.rollFormula)}`:''}</span></button>`).join('')}</div></div>`;body.innerHTML=items.length?`<div class="action-groups">${rolled.length?group(rolled):''}${plain.length?group(plain):''}</div>`:'<div class="empty-state">Пока нет активных способностей.</div>';body.querySelectorAll('[data-ability-detail]').forEach(b=>b.onclick=()=>{const a=ch.abilities.find(x=>x.id===b.dataset.abilityDetail);if(a.rollFormula||a.effectFormula){if(Number(a.usesMax)>0&&Number(a.usesLeft)<=0){toast('Использования закончились');return}if(Number(a.usesMax)>0)a.usesLeft--;save();dlg.close();rollAndShow(a.name,a.rollFormula||a.effectFormula,a.rollEffect||'none',a.rollFormula?a.effectFormula:'',a.extraDamageFormula||'',true);return}body.innerHTML=`<div class="prose"><strong>${esc(a.name)}</strong><br>${esc(a.summary||'Описание не добавлено.')}${a.note?`<div class="record-note">${esc(a.note)}</div>`:''}</div>`});}
+      dlg.showModal();
+    }
+    document.querySelector('[data-action-close]').addEventListener('click',()=>$('#actionDialog').close());
+    const dialog=$('#editorDialog'), fields=$('#modalFields');
+    function field(label,name,value='',type='text',placeholder='') { return `<div class="field"><label for="f-${name}">${label}</label>${type==='textarea'?`<textarea id="f-${name}" name="${name}" placeholder="${esc(placeholder)}">${esc(value)}</textarea>`:`<input id="f-${name}" name="${name}" type="${type}" value="${esc(value)}" placeholder="${esc(placeholder)}">`}</div>`; }
+    function openDialog(title,body,context, deleting=false) { editorContext=context; $('#modalTitle').textContent=title; fields.innerHTML=body; $('#deleteButton').hidden=!deleting; dialog.showModal(); }
+    function openCharacterEditor(ch=null) {
+      openDialog(ch?'Карточка персонажа':'Новый персонаж',`${field('Имя персонажа','name',ch?.name||'','text','Например, Лира Вейн')}${field('Фракция / папка','faction',ch?.faction||'','text','Например, Чёрный лист')}${field('Класс, уровень или короткая подпись','subtitle',ch?.subtitle||'','text','Эльфийка · волшебница 12 ур.')}<div class="form-grid">${field('Инициалы для списка','initials',ch?.initials||'','text','ЛВ')}${field('','unused','','hidden')}</div>`,{type:'character',id:ch?.id||null},!!ch);
+      $('#deleteButton').onclick=()=>{if(!confirm(`Удалить персонажа «${ch.name}» вместе со всеми его записями?`))return;state.characters=state.characters.filter(x=>x.id!==ch.id);state.selectedId=state.characters[0]?.id||null;activeTab='overview';save();dialog.close();render();toast('Персонаж удалён')};
+    }
+    function openBackstoryEditor(ch) {
+      openDialog('Предыстория и важное',`${field('Предыстория','backstory',ch.backstory||'','textarea','История, цели, связи…')}${field('Важные детали для ведущего','highlights',ch.highlights||'','textarea','Ключевые имена, тайны, зацепки…')}`,{type:'backstory',id:ch.id});
+      $('#deleteButton').hidden=true;
+    }
+    function deleteCharacter(id){const ch=state.characters.find(x=>x.id===id);if(!ch)return;if(!confirm(`Удалить персонажа «${ch.name}» и все его записи?`))return;state.characters=state.characters.filter(x=>x.id!==id);if(state.selectedId===id)state.selectedId=state.characters[0]?.id||null;activeTab='overview';save();render();toast('Персонаж удалён')}
+    function numField(label,name,value,placeholder='0'){return field(label,name,value??0,'number',placeholder)}
+    function openStatsEditor(ch=current()){
+      const s=ch.stats;let body=`<div class="form-grid">${numField('Текущие HP','hpCurrent',s.hp.current)}${numField('Максимум HP','hpMax',s.hp.max)}</div><div class="form-grid">${numField('Временные HP','hpTemp',s.hp.temp)}${numField('Класс брони · AC','ac',s.ac)}</div><div class="form-grid">${numField('Инициатива (модификатор)','initiative',s.initiative)}${numField('Скорость, футы','speed',s.speed)}</div><div class="form-grid">${numField('Бонус мастерства','proficiency',s.proficiency)}${numField('Сл. спасброска заклинаний','spellDC',s.spellDC)}</div><div class="form-grid">${numField('Атака заклинанием','spellAttack',s.spellAttack)}${numField('Пассивная внимательность','passivePerception',s.passivePerception)}</div><div class="section-head"><div><h2>Владение спасбросками</h2><div class="section-caption">Бонус мастерства прибавится только к отмеченным спасброскам</div></div></div><div class="save-proficiency-grid">${Object.entries(statFullNames).map(([key,label])=>`<label><input type="checkbox" name="saveProf_${key}" ${(s.savingThrowProficiencies||[]).includes(key)?'checked':''}>${label}</label>`).join('')}</div><div class="section-head"><div><h2>Основные характеристики</h2><div class="section-caption">Укажи источник, если хочешь видеть, как получено значение</div></div></div>`;
+      for(const [key,label] of Object.entries(statNames)){const a=s.abilityScores[key]||{score:10,source:''};body+=`<div class="form-grid">${numField(`${label} · значение`,`${key}Score`,a.score)}${field(`${label} · источник / бонус`,`${key}Source`,a.source||'','text','Народ, черта, предмет…')}</div>`}
+      openDialog('Основные показатели',body,{type:'stats',id:ch.id});
+    }
+    function openSlotsEditor(ch=current()){
+      let body='<div class="section-caption">Укажи максимум ячеек каждого уровня. Текущий остаток сохранится и уменьшится, если новый максимум ниже.</div>';
+      for(let level=1;level<=9;level++){const slot=ch.spellSlots[level]||{max:0};body+=numField(`${level}-й уровень · максимум`,'slot'+level,slot.max)}
+      openDialog('Настроить ячейки заклинаний',body,{type:'slots',id:ch.id});
+    }
+    function openRecordEditor(ch=current(),section=null,id=null) {
+      if(!ch)return; const chosen=section|| (activeTab==='spells'?'spells':activeTab==='inventory'?'inventory':'abilities'); const old=id?(ch[chosen]||[]).find(r=>r.id===id):null;
+      const color=old?.color||'low';
+      let body=`${field('Название','name',old?.name||'','text',chosen==='inventory'?'Например, Зелье лечения':'Например, Контрзаклинание')}<div class="form-grid">${field('Категория','category',old?.category||'','text','Реакция, особенность, предмет…')}${field(chosen==='spells'?'Уровень заклинания':'Тир','tier',old?.tier||'','text',chosen==='spells'?'Например, 3 уровень или заговор':'Например, высокий тир')}</div>`;
+      if(chosen==='inventory'){
+        body+=`<div class="form-grid">${numField('Количество','quantity',old?.quantity??1)}<div class="field"><label for="f-color">Тир предмета</label><select id="f-color" name="color"><option value="low" ${color==='low'?'selected':''}>Обычный · зелёный</option><option value="mid" ${color==='mid'?'selected':''}>Редкий · синий</option><option value="high" ${color==='high'?'selected':''}>Очень редкий / важный · золотой</option></select></div></div><div class="form-grid"><div class="field"><label for="f-equipped">Надет или при себе</label><select id="f-equipped" name="equipped"><option value="false" ${!old?.equipped?'selected':''}>Нет</option><option value="true" ${old?.equipped?'selected':''}>Да</option></select></div><div class="field"><label for="f-important">Важный предмет</label><select id="f-important" name="important"><option value="false" ${!old?.important?'selected':''}>Нет</option><option value="true" ${old?.important?'selected':''}>Да</option></select></div></div>`;
+      } else {
+        body+=`<div class="form-grid"><div class="field"><label for="f-section">Раздел</label><select id="f-section" name="section"><option value="abilities" ${chosen==='abilities'?'selected':''}>Способность</option><option value="spells" ${chosen==='spells'?'selected':''}>Заклинание</option></select></div><div class="field"><label for="f-color">Цветовая метка</label><select id="f-color" name="color"><option value="low" ${color==='low'?'selected':''}>Зелёная · низкий</option><option value="mid" ${color==='mid'?'selected':''}>Синяя · средний</option><option value="high" ${color==='high'?'selected':''}>Золотая · высокий</option></select></div></div>`;
+        if(chosen==='abilities')body+=`<div class="form-grid"><div class="field"><label for="f-kind">Тип способности</label><select id="f-kind" name="kind"><option value="active" ${!old?.passive?'selected':''}>Активная / расходуемая</option><option value="passive" ${old?.passive?'selected':''}>Пассивная / постоянная</option></select></div>${numField('Использований между отдыхом (0 — без счётчика)','usesMax',old?.usesMax??0)}</div><div class="field"><label for="f-recovery">Восстановление</label><select id="f-recovery" name="recovery"><option value="short" ${old?.recovery==='short'?'selected':''}>Короткий отдых</option><option value="long" ${!old?.recovery||old?.recovery==='long'?'selected':''}>Долгий отдых</option><option value="manual" ${old?.recovery==='manual'?'selected':''}>Вручную / другое</option></select></div>`;
+      }
+      body+=`${field('Описание','summary',old?.summary||'','textarea','Что делает запись?')}${chosen!=='inventory'?`<div class="form-grid">${field('Формула броска при активации','rollFormula',old?.rollFormula||'','text','Например, 1d20+8')}${field('Формула урона / лечения','effectFormula',old?.effectFormula||'','text','Например, 1d8+4')}</div>${chosen==='spells'?field('Прибавка за каждый уровень ячейки выше','upcastEffectFormula',old?.upcastEffectFormula||'','text','Например, 1d8'):''}${chosen==='abilities'?field('Добавочный урон к атаке','extraDamageFormula',old?.extraDamageFormula||'','text','Например, 3d6 для скрытой атаки'):''}<div class="field"><label for="f-rollEffect">Что делает эффект?</label><select id="f-rollEffect" name="rollEffect"><option value="none" ${!old?.rollEffect||old.rollEffect==='none'?'selected':''}>Только показать бросок</option><option value="damage" ${old?.rollEffect==='damage'?'selected':''}>Показать урон цели</option><option value="heal" ${old?.rollEffect==='heal'?'selected':''}>Восстановить HP персонажа</option></select></div>`:''}<div class="field"><label for="f-note">Заметка ведущего</label><textarea class="short" id="f-note" name="note" placeholder="Свои напоминания, ограничения, ситуация применения…">${esc(old?.note||'')}</textarea></div>`;
+      openDialog(old?'Изменить запись':'Новая запись',body,{type:'record',characterId:ch.id,id:old?.id||null,section:chosen},!!old);
+      $('#deleteButton').onclick=()=>{if(!confirm(`Удалить запись «${old.name}»?`))return;ch[chosen]=(ch[chosen]||[]).filter(r=>r.id!==old.id);save();dialog.close();render();toast('Запись удалена')};
+    }
+    $('#editorForm').addEventListener('submit',e=>{
+      e.preventDefault(); const data=Object.fromEntries(new FormData(e.currentTarget).entries()); const ctx=editorContext;
+      if(ctx.type==='character') {
+        if(!data.name.trim()){ $('#f-name').focus(); return; }
+        if(ctx.id){const ch=state.characters.find(x=>x.id===ctx.id);Object.assign(ch,{name:data.name.trim(),faction:data.faction.trim(),subtitle:data.subtitle.trim(),initials:(data.initials.trim()||data.name.trim().slice(0,2)).toUpperCase()})}
+        else {const ch=ensureCharacter({id:makeId(),name:data.name.trim(),faction:data.faction.trim(),subtitle:data.subtitle.trim(),initials:(data.initials.trim()||data.name.trim().slice(0,2)).toUpperCase(),backstory:'',highlights:'',abilities:[],spells:[]});state.characters.push(ch);state.selectedId=ch.id;activeTab='overview'}
+      } else if(ctx.type==='backstory') {const ch=state.characters.find(x=>x.id===ctx.id);ch.backstory=data.backstory;ch.highlights=data.highlights}
+      else if(ctx.type==='stats'){
+        const ch=state.characters.find(x=>x.id===ctx.id),s=ch.stats;
+        s.hp.max=Math.max(0,Number(data.hpMax)||0);s.hp.current=Math.max(0,Math.min(s.hp.max,Number(data.hpCurrent)||0));s.hp.temp=Math.max(0,Number(data.hpTemp)||0);
+        for(const key of ['ac','initiative','speed','proficiency','spellDC','spellAttack','passivePerception'])s[key]=Number(data[key])||0;
+        s.savingThrowProficiencies=Object.keys(statFullNames).filter(key=>data[`saveProf_${key}`]==='on');
+        for(const key of Object.keys(statNames)){s.abilityScores[key]={score:Number(data[key+'Score'])||0,source:data[key+'Source']||''}}
+      }
+      else if(ctx.type==='slots'){
+        const ch=state.characters.find(x=>x.id===ctx.id);
+        for(let level=1;level<=9;level++){const max=Math.max(0,Number(data['slot'+level])||0);const old=ch.spellSlots[level]||{remaining:0};ch.spellSlots[level]={max,remaining:Math.min(max,Number(old.remaining)||0)}}
+      }
+      else if(ctx.type==='record') {
+        if(!data.name.trim()){ $('#f-name').focus();return; }
+        const ch=state.characters.find(x=>x.id===ctx.characterId); const destination=ctx.section==='inventory'?'inventory':data.section; const prior=(ch[destination]||[]).find(r=>r.id===ctx.id);
+        const record={id:ctx.id||makeId(),name:data.name.trim(),category:(data.category||'').trim(),tier:(data.tier||'').trim(),color:data.color||'low',summary:(data.summary||'').trim(),note:(data.note||'').trim(),rollFormula:(data.rollFormula||'').trim(),effectFormula:(data.effectFormula||'').trim(),upcastEffectFormula:(data.upcastEffectFormula||'').trim(),extraDamageFormula:(data.extraDamageFormula||'').trim(),rollEffect:data.rollEffect||'none'};
+        if(destination==='inventory'){record.quantity=Math.max(0,Number(data.quantity)||0);record.equipped=data.equipped==='true';record.important=data.important==='true'}
+        if(destination==='abilities'){
+          record.passive=data.kind==='passive';record.usesMax=record.passive?0:Math.max(0,Number(data.usesMax)||0);record.usesLeft=record.usesMax?Math.min(record.usesMax,Number(prior?.usesLeft??record.usesMax)):0;record.recovery=data.recovery||'long';
+        }
+        for(const sec of ['abilities','spells','inventory'])ch[sec]=(ch[sec]||[]).filter(r=>r.id!==record.id);
+        (ch[destination]||(ch[destination]=[])).push(record);
+      }
+      save();dialog.close();render();toast('Изменения сохранены');
+    });
+    document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>dialog.close()));
+    $('#addCharacterSide').addEventListener('click',()=>openCharacterEditor());
+    $('#searchInput').addEventListener('input',e=>{searchQuery=e.target.value;render();const input=$('#searchInput');input.focus();input.setSelectionRange(input.value.length,input.value.length)});
+    document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='f'){e.preventDefault();$('#searchInput').focus();$('#searchInput').select()}if(e.key==='Escape'&&$('#sidebar').classList.contains('open'))$('#sidebar').classList.remove('open')});
+    $('#menuButton').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
+    $('#exportButton').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='kniga-partii.json';a.click();URL.revokeObjectURL(url);toast('Копия данных скачана')});
+    $('#importButton').addEventListener('click',()=>$('#importFile').click());
+    function mergeCharacterPackage(pkg) {
+      const incoming=pkg.character;
+      if(!incoming||typeof incoming.name!=='string'||!incoming.name.trim())throw Error('bad character');
+      const cleanName=incoming.name.trim();
+      const modifierKeys={СИЛЫ:'str',СИЛА:'str',ЛОВКОСТИ:'dex',ЛОВКОСТЬ:'dex',ТЕЛОСЛОЖЕНИЯ:'con',ТЕЛОСЛОЖЕНИЕ:'con',ИНТЕЛЛЕКТА:'int',ИНТЕЛЛЕКТ:'int',МУДРОСТИ:'wis',МУДРОСТЬ:'wis',ХАРИЗМЫ:'cha',ХАРИЗМА:'cha'};
+      const resolveImportedFormula=value=>String(value||'').replace(/[кК]/g,'d').replace(/МОДИФИКАТОР\s+(СИЛЫ|СИЛА|ЛОВКОСТИ|ЛОВКОСТЬ|ТЕЛОСЛОЖЕНИЯ|ТЕЛОСЛОЖЕНИЕ|ИНТЕЛЛЕКТА|ИНТЕЛЛЕКТ|МУДРОСТИ|МУДРОСТЬ|ХАРИЗМЫ|ХАРИЗМА)/gi,(whole,label)=>{const raw=incoming.stats?.abilityScores?.[modifierKeys[label.toLocaleUpperCase('ru')]]?.score;if(raw===undefined||raw===null)return whole;return String(Math.floor((Number(raw)-10)/2))}).replace(/БОНУС\s+АТАКИ\s+ЗАКЛИНАНИЕМ/gi,()=>incoming.stats?.spellAttack==null?'БОНУС АТАКИ ЗАКЛИНАНИЕМ':String(Number(incoming.stats.spellAttack))).replace(/БОНУСА?\s+МАСТЕРСТВА/gi,()=>incoming.stats?.proficiency==null?'БОНУС МАСТЕРСТВА':String(Number(incoming.stats.proficiency)));
+      for(const section of ['abilities','spells'])for(const item of incoming[section]||[])for(const key of ['rollFormula','effectFormula','upcastEffectFormula','extraDamageFormula'])if(typeof item[key]==='string'&&/(МОДИФИКАТОР|БОНУС\s+АТАКИ|БОНУС\s+МАСТЕРСТВА)/i.test(resolveImportedFormula(item[key])))throw Error(`В записи «${item.name||'без названия'}» не указан числовой модификатор. Уточни характеристику и заново создай JSON.`);
+      const normalizeRollEffect=value=>({heal:'heal',healing:'heal',лечит:'heal',лечение:'heal',исцеление:'heal',damage:'damage',damaging:'damage',урон:'damage',none:'none',нет:'none','':'none'}[String(value||'').trim().toLocaleLowerCase('ru')]||'none');
+      let target=state.characters.find(c=>(incoming.id&&c.id===incoming.id)||c.name.trim().toLocaleLowerCase('ru')===cleanName.toLocaleLowerCase('ru'));
+      if(!target){target={id:incoming.id||makeId(),name:cleanName,subtitle:'',initials:cleanName.slice(0,2).toUpperCase(),backstory:'',highlights:'',abilities:[],spells:[]};state.characters.push(target)}
+      target.name=cleanName;
+      for(const key of ['subtitle','initials','backstory','highlights','faction'])if(typeof incoming[key]==='string')target[key]=incoming[key];
+      if(Array.isArray(incoming.statusEffects))target.statusEffects=incoming.statusEffects.filter(s=>s&&typeof s.name==='string').map(s=>({id:s.id||'',icon:s.icon||'🔸',name:s.name,summary:s.summary||'',duration:s.duration||''}));
+        if(incoming.stats&&typeof incoming.stats==='object'){
+          const oldHp=target.stats?.hp?{...target.stats.hp}:null;
+          target.stats ||= {};
+          for(const [key,value] of Object.entries(incoming.stats))if(!['hp','abilityScores'].includes(key)&&value!==null&&value!==undefined)target.stats[key]=value;
+          if(incoming.stats.hp){const next={...(target.stats.hp||{})};for(const [key,value] of Object.entries(incoming.stats.hp))if(value!==null&&value!==undefined)next[key]=value;if(oldHp&&Number(oldHp.max)>0){next.current=Math.min(Number(next.max)||0,Number(oldHp.current)||0);next.temp=Number(oldHp.temp)||0;}target.stats.hp=next;}
+          if(incoming.stats.abilityScores){target.stats.abilityScores ||= {};for(const [key,value] of Object.entries(incoming.stats.abilityScores)){if(!value||typeof value!=='object')continue;const merged={...(target.stats.abilityScores[key]||{})};for(const [part,v] of Object.entries(value))if(v!==null&&v!==undefined)merged[part]=v;target.stats.abilityScores[key]=merged;}}
+        }
+        if(incoming.spellSlots&&typeof incoming.spellSlots==='object'){
+          target.spellSlots ||= {};
+          for(const [level,slot] of Object.entries(incoming.spellSlots))if(slot&&Number(level)>=1&&Number(level)<=9){const old=target.spellSlots[level];const max=slot.max==null?Number(old?.max)||0:Math.max(0,Number(slot.max)||0);const remaining=Number(old?.max)>0?old.remaining:(slot.remaining==null?max:slot.remaining);target.spellSlots[level]={max,remaining:Math.max(0,Math.min(max,Number(remaining)||0))}}
+        }
+        for(const section of ['abilities','spells','inventory'])if(Array.isArray(incoming[section])){
+        target[section] ||= [];
+        for(const item of incoming[section]){
+          if(!item||typeof item.name!=='string'||!item.name.trim())continue;
+          const name=item.name.trim();
+          const old=target[section].find(r=>(item.id&&r.id===item.id)||r.name.trim().toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru'));
+        const record={id:old?.id||item.id||makeId(),name};
+          for(const key of ['category','tier','color','summary','note','recovery','rollFormula','effectFormula','upcastEffectFormula','extraDamageFormula','rollEffect','saveAbility'])if(typeof item[key]==='string')record[key]=key==='rollEffect'?normalizeRollEffect(item[key]):key.endsWith('Formula')?resolveImportedFormula(item[key]):item[key];
+          for(const key of ['passive','equipped','important','halfOnSave'])if(typeof item[key]==='boolean')record[key]=item[key];
+          if(item.saveDC!==null&&item.saveDC!==undefined&&Number.isFinite(Number(item.saveDC)))record.saveDC=Number(item.saveDC);
+          for(const key of ['usesMax','usesLeft','quantity'])if(item[key]!==null&&item[key]!==undefined&&item[key]!==''&&Number.isFinite(Number(item[key])))record[key]=Number(item[key]);
+          if(old&&section==='abilities'&&Number(old.usesMax)>0&&Number(record.usesMax)>0)record.usesLeft=Math.min(Number(record.usesMax),Number(old.usesLeft??old.usesMax));
+          if(old&&section==='inventory')record.quantity=Number(old.quantity)||0;
+          if(old)Object.assign(old,record);else target[section].push(record);
+        }
+      }
+      ensureCharacter(target);
+      state.selectedId=target.id;
+    }
+    async function importFile(file){if(!file)return;
+      try{
+        const data=JSON.parse(await file.text());
+        if(data?.format==='party-book-character-v1'||(data?.format==='party-book-character'&&Number(data.version)===1)){
+          mergeCharacterPackage(data);
+          toast('Карточка импортирована и объединена');
+        } else if(Array.isArray(data.characters)){
+          if(!confirm('Этот файл содержит целую резервную копию. Заменить им все текущие данные?'))return;
+          data.characters.forEach(ensureCharacter);state={characters:data.characters,selectedId:data.selectedId||data.characters[0]?.id||null};
+          toast('Резервная копия восстановлена');
+        } else throw Error('bad format');
+        activeTab='overview';searchQuery='';$('#searchInput').value='';save();render();
+      } catch(error){alert(`Не удалось импортировать файл. Проверь формат JSON, формулы бросков и числовые модификаторы. ${error?.message||''}`)}
+    }
+    $('#importFile').addEventListener('change',async e=>{await importFile(e.target.files[0]);e.target.value=''});
+    let dragDepth=0;const overlay=$('#dropOverlay');
+    document.addEventListener('dragenter',e=>{e.preventDefault();if([...e.dataTransfer.types].includes('Files')){dragDepth++;overlay.classList.add('show')}});
+    document.addEventListener('dragover',e=>e.preventDefault());
+    document.addEventListener('dragleave',e=>{e.preventDefault();dragDepth=Math.max(0,dragDepth-1);if(!dragDepth)overlay.classList.remove('show')});
+    document.addEventListener('drop',async e=>{e.preventDefault();dragDepth=0;overlay.classList.remove('show');const file=[...e.dataTransfer.files].find(f=>f.name.toLowerCase().endsWith('.json')||f.type==='application/json');if(file)await importFile(file);else toast('Перетащи файл .json')});
+    $('#helpButton').addEventListener('click',()=>alert('Поиск: Ctrl+Shift+F. Удалить персонажа можно крестиком справа от его имени в списке слева. На главной можно менять HP кнопками и редактировать показатели с их источниками. Данные сохраняются автоматически; экспортируй резервную копию.'));
+    window.partyBookApp = {
+      characters: () => structuredClone(state.characters),
+      selectedId: () => state.selectedId,
+      selectCharacter(id) { if(!state.characters.some(ch=>ch.id===id))return false;state.selectedId=id;activeTab='overview';render();return true; },
+      setPresentation(id, presentation) { const ch=state.characters.find(item=>item.id===id);if(!ch)return false;ch.presentation=presentation?{url:String(presentation.url||''),name:String(presentation.name||'Представление GIF')}:null;save();render();return true; },
+      applyOwlbear(data) {
+        let ch=state.characters.find(item=>item.id===data.characterId);
+        if(!ch && data.name) ch=state.characters.find(item=>item.name.trim().toLocaleLowerCase('ru')===String(data.name).trim().toLocaleLowerCase('ru'));
+        if(!ch)return null;
+        state.selectedId=ch.id;
+        if(data.hp){ch.stats.hp.current=Number(data.hp.current??ch.stats.hp.current);ch.stats.hp.max=Number(data.hp.max??ch.stats.hp.max);ch.stats.hp.temp=Number(data.hp.temp??ch.stats.hp.temp)}
+        for(const key of ['ac','speed','spellDC','spellAttack','initiative'])if(data[key]!==undefined&&data[key]!==null)ch.stats[key]=Number(data[key]);
+        if(data.spellSlots)for(const [level,slot] of Object.entries(data.spellSlots)){if(ch.spellSlots[level])ch.spellSlots[level].remaining=Math.max(0,Math.min(Number(ch.spellSlots[level].max),Number(slot.remaining??ch.spellSlots[level].remaining)))}
+        if(data.abilityUses)for(const ability of ch.abilities||[])if(data.abilityUses[ability.id]!==undefined)ability.usesLeft=Math.max(0,Math.min(Number(ability.usesMax)||0,Number(data.abilityUses[ability.id])||0));
+        if(Array.isArray(data.statusEffects))ch.statusEffects=data.statusEffects.map(status=>({...status,icon:STATUS_ICONS[status.id]||status.icon||'🔸'}));
+        save();render();return structuredClone(ch);
+      },
+      importCharacterPackage(text, preferredName) {
+        const data=JSON.parse(text);
+        if(!['party-book-character-v1','party-book-character'].includes(data?.format)||!data.character||typeof data.character.name!=='string')throw Error('Нужен JSON карточки персонажа формата party-book-character.');
+        const pkg={...data,format:'party-book-character-v1',character:{...data.character}};
+        if(preferredName?.trim())pkg.character.name=preferredName.trim();
+        mergeCharacterPackage(pkg);
+        activeTab='overview';searchQuery='';$('#searchInput').value='';save();render();
+        return structuredClone(current());
+      }
+    };
+    render();
+  })();
+  </script>
+  <script type="module" src="/src/sheet-bridge.js"></script>
+</body>
+</html>

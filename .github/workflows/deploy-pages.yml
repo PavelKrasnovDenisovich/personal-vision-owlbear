@@ -1,8 +1,8 @@
-name: Deploy Owlbear extension to GitHub Pages
+name: Build and deploy Owlbear extensions
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -16,30 +16,58 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    env:
-      PAGES_BASE_PATH: /personal-vision-owlbear/
     steps:
-      - name: Check out source
+      - name: Check out repository
         uses: actions/checkout@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - name: Install dependencies
+          cache-dependency-path: |
+            owlbear-extension/package-lock.json
+            vision-extension/package-lock.json
+
+      - name: Install Party Book dependencies
         run: npm ci
-      - name: Build static extension
+        working-directory: owlbear-extension
+
+      - name: Build Party Book
         run: npm run build
+        working-directory: owlbear-extension
+        env:
+          PAGES_BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: Install Personal Vision dependencies
+        run: npm ci
+        working-directory: vision-extension
+
+      - name: Build Personal Vision
+        run: npm run build
+        working-directory: vision-extension
+        env:
+          PAGES_BASE_PATH: /${{ github.event.repository.name }}/vision/
+
+      - name: Assemble Pages site
+        run: |
+          mkdir -p site/vision
+          cp -R owlbear-extension/dist/. site/
+          cp -R vision-extension/dist/. site/vision/
+          touch site/.nojekyll
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload built site
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
-      - name: Deploy site
+          path: site
+
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
