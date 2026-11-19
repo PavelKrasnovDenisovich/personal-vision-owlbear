@@ -80,6 +80,7 @@ OBR.onReady(async () => {
           brightCells: Number(preset.brightCells) || 0,
           dimCells: Number(preset.dimCells) || 0,
           tint: Boolean(preset.tint),
+          position: { x: event.pointerPosition.x, y: event.pointerPosition.y },
           marker: true,
         };
         await OBR.scene.setMetadata({ [STATE_KEY]: state });

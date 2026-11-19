@@ -1,6 +1,6 @@
 {
   "name": "Книга партии",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "manifest_version": 1,
   "description": "Листы персонажей с бросками характеристик и боевая панель для Owlbear Rodeo.",
   "icon": "/book-icon-v3.svg",

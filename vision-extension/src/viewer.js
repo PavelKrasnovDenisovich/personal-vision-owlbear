@@ -14,7 +14,7 @@ let drawing = false;
 let drawPending = false;
 let isGmPreview = false;
 
-document.documentElement.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden";
+document.documentElement.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden;pointer-events:none";
 document.body.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden;pointer-events:none";
 canvas.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none";
 
@@ -124,16 +124,16 @@ async function draw() {
         if (tokenCenter) {
           const point = await screenPoint(tokenCenter);
           if (point) {
-            if ((window.__visionPreviewAmbient || sceneState.ambient) === "dark") circles.push({ ...point, radius: radiusFor(assignment.darkvisionCells), strength: 0.68, tint: true });
+            if ((window.__visionPreviewAmbient || sceneState.ambient) === "dark") circles.push({ ...point, radius: radiusFor(assignment.darkvisionCells), strength: 0.72, tint: true, vision: true });
             else circles.push({ ...point, radius: radiusFor(assignment.brightCells), strength: 1 });
           }
         }
         for (const [itemId, light] of Object.entries(sceneState.lights || {})) {
-          const center = await getCenter(itemId);
+          const center = await getCenter(itemId) || light.position || null;
           if (!center) continue;
           const point = await screenPoint(center);
           if (!point) continue;
-          circles.push({ ...point, radius: radiusFor(light.dimCells), strength: light.tint ? 0.68 : 0.45, tint: Boolean(light.tint), light: true });
+          circles.push({ ...point, radius: radiusFor(light.dimCells), strength: light.tint ? 0.72 : 0.7, tint: Boolean(light.tint), light: true });
           circles.push({ ...point, radius: radiusFor(light.brightCells), strength: 1, light: true, bright: true });
         }
       }
@@ -159,9 +159,11 @@ async function draw() {
       context.globalAlpha = 1;
       context.fillStyle = "rgba(0,0,0,0.97)";
       context.fillRect(0, 0, width, height);
-      for (const circle of circles.filter((entry) => entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
+      for (const circle of circles.filter((entry) => entry.vision)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
+      for (const circle of circles.filter((entry) => entry.vision && entry.tint)) tintCircle(circle);
+      for (const circle of circles.filter((entry) => !entry.vision && entry.light && entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
       for (const circle of circles.filter((entry) => entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-      for (const circle of circles.filter((entry) => entry.tint)) tintCircle(circle);
+      for (const circle of circles.filter((entry) => entry.tint && !entry.vision)) tintCircle(circle);
       drawLightGuides(circles);
       context.globalCompositeOperation = "source-over";
       displayContext.setTransform(1, 0, 0, 1, 0, 0);
@@ -194,7 +196,7 @@ OBR.onReady(async () => {
     exitButton.type = "button";
     exitButton.textContent = "×  Выйти из предпросмотра";
     exitButton.setAttribute("aria-label", "Выйти из предпросмотра личного обзора");
-    exitButton.style.cssText = "position:fixed;z-index:2147483647;top:16px;right:18px;pointer-events:auto;cursor:pointer;border:2px solid #8be9e2;border-radius:999px;background:#10262a;color:#fff;padding:12px 18px;font:700 15px/1.2 system-ui,sans-serif;box-shadow:0 4px 20px #000a";
+    exitButton.style.cssText = "position:fixed;z-index:2147483647;top:16px;left:16px;pointer-events:auto;cursor:pointer;border:2px solid #8be9e2;border-radius:999px;background:#10262a;color:#fff;padding:12px 18px;font:700 15px/1.2 system-ui,sans-serif;box-shadow:0 4px 20px #000a";
     document.body.append(exitButton);
     const exitPreview = async () => {
       await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [`${EXTENSION_ID}/preview-active`]: false });

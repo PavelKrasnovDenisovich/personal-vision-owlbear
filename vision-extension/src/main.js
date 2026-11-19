@@ -60,7 +60,7 @@ function render() {
   }).join("");
   const lights = Object.entries(roomState.lights).map(([itemId, entry]) => {
     const item = objects.find((candidate) => candidate.id === itemId);
-    return `<article class="saved-row"><div class="row-title"><strong>💡 ${esc(item?.name || entry.name || "Удалённый источник")}</strong><span>${entry.marker ? "Невидимая метка" : "Источник света"}</span></div><div class="row-meta">${entry.presetName ? `${esc(entry.presetName)} · ` : ""}Яркая область: ${Number(entry.brightCells) || 0} кл. · внешний тусклый радиус: ${Number(entry.dimCells) || 0} кл.${entry.tint ? " · серый тон" : ""}</div><div class="row-buttons"><button data-edit-light="${esc(itemId)}">Изменить</button><button class="danger" data-remove-light="${esc(itemId)}">Убрать</button></div></article>`;
+    return `<article class="saved-row"><div class="row-title"><strong>💡 ${esc(item?.name || entry.name || "Удалённый источник")}</strong><span>${entry.marker ? "Источник на карте" : "Источник света"}</span></div><div class="row-meta">${entry.presetName ? `${esc(entry.presetName)} · ` : ""}Яркая область: ${Number(entry.brightCells) || 0} кл. · граница тусклого света: ${Number(entry.dimCells) || 0} кл.${entry.tint ? " · серый тон" : ""}</div><div class="row-buttons"><button data-edit-light="${esc(itemId)}">Изменить</button><button class="danger" data-remove-light="${esc(itemId)}">Убрать</button></div></article>`;
   }).join("");
 
   root.innerHTML = `<main class="panel">
@@ -80,9 +80,9 @@ function render() {
     <section class="section"><div class="section-head"><div><h2>Источники света</h2><p>Выбери токен или предмет, который несёт свет.</p></div></div>
       <label>Профиль для новой метки<select id="light-preset"><option value="candle">Свеча · яркая 1, внешний радиус 2 кл.</option><option value="torch">Факел · яркий 4, внешний радиус 8 кл.</option><option value="lantern">Фонарь · яркий 6, внешний радиус 12 кл.</option><option value="darkvision">Тёмное зрение · серый тон 12 кл.</option></select></label>
       <button id="place-light-marker">Поставить выбранный источник…</button>
-      <p class="hint">Новая невидимая метка: выберите профиль → нажмите кнопку → панель закроется → щёлкните в точку на карте. Чтобы увидеть разницу, задайте сцене «Темнота», персонажу 0 тёмного зрения и включите предпросмотр. Для существующей картинки выберите её ниже и нажмите «Назначить профиль».</p>
+      <p class="hint">Выберите профиль и нажмите кнопку, затем щёлкните по карте. Свет работает независимо от радиуса зрения персонажа. В темноте персонаж без тёмного зрения увидит области фонарей; тёмное зрение добавит серую область вокруг самого персонажа. Во время предпросмотра золотой контур показывает яркий свет, пунктирный — границу тусклого света.</p>
       <label>Уже есть картинка свечи/фонаря? Выберите её<select id="light-select"><option value="">Выбери объект</option>${objectOptions}</select></label>
-      <div class="two-fields"><label>Яркая область, клеток радиус<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Внешний тусклый радиус, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
+      <div class="two-fields"><label>Яркая область, клеток радиус<input id="light-bright" type="number" min="0" max="200" value="4"></label><label>Граница тусклого света, клетки<input id="light-dim" type="number" min="0" max="200" value="8"></label></div>
       <button class="primary" id="save-light">Назначить профиль выбранному объекту</button>
       <div class="saved-list">${lights || `<div class="empty">Источников света пока нет.</div>`}</div>
     </section>
@@ -115,7 +115,7 @@ function render() {
     const item = objects.find((candidate) => candidate.id === itemId);
     const presetId = root.querySelector("#light-preset").value;
     const preset = LIGHT_PRESETS[presetId];
-    roomState.lights[itemId] = { name: nameOf(item), brightCells: clamp(root.querySelector("#light-bright").value), dimCells: clamp(root.querySelector("#light-dim").value), tint: Boolean(preset?.tint), presetName: preset?.name || "" };
+    roomState.lights[itemId] = { name: nameOf(item), brightCells: clamp(root.querySelector("#light-bright").value), dimCells: clamp(root.querySelector("#light-dim").value), tint: Boolean(preset?.tint), position: item?.position || undefined, presetName: preset?.name || "" };
     await persist();
   };
   root.querySelector("#light-preset").onchange = (event) => {
