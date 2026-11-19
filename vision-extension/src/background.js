@@ -11,7 +11,6 @@ const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const LIGHT_DATA_KEY = `${EXTENSION_ID}/light-data`;
 const MASK_EFFECT_KEY = `${EXTENSION_ID}/local-mask-effect`;
 const LIGHT_GHOST_KEY = `${EXTENSION_ID}/light-ghost`;
-const OLD_PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
 const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
 const extensionUrl = (path) => {
   const url = new URL(path, location.href);
@@ -36,7 +35,6 @@ OBR.onReady(async () => {
   let modalOpen = false;
 
   if (role === "GM") {
-    await OBR.tool.removeMode(OLD_PLACE_MODE_ID).catch(() => {});
     const localItems = await OBR.scene.local.getItems().catch(() => []);
     const ghostIds = localItems.filter((item) => item.metadata?.[LIGHT_GHOST_KEY]).map((item) => item.id);
     if (ghostIds.length) await OBR.scene.local.deleteItems(ghostIds).catch(() => {});

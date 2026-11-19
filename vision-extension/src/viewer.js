@@ -80,7 +80,7 @@ function lightFromName(name) {
 function maskShader(circles, blind) {
   const declarations = circles.map((_, index) => `uniform vec3 center${index}; uniform float strength${index}; uniform float tint${index};`).join("\n");
   const samples = circles.map((_, index) => `
-    float d${index} = distance(screenPoint, center${index}.xy);
+    float d${index} = distance(coord, center${index}.xy);
     float edge${index} = max(3.0, center${index}.z * 0.035);
     float fade${index} = 1.0 - smoothstep(center${index}.z - edge${index}, center${index}.z, d${index});
     visibility = max(visibility, fade${index} * strength${index});
@@ -95,12 +95,13 @@ function maskShader(circles, blind) {
   color = mix(color, vec3(gray), tintAmount * 0.25);
   return half4(color, 1.0);`;
   return `uniform shader scene;
+uniform mat3 view;
 ${declarations}
 half4 main(float2 coord) {
-  // Circle centers are already transformed into viewport pixels by OBR.
-  // Comparing against a second view transform shifted and scaled the mask.
-  vec2 screenPoint = coord;
-  half4 sceneColor = scene.eval(coord);
+  // Sample the scene through Owlbear's viewport transform, but compare the
+  // already-screen-space OBR circle centers against this output pixel directly.
+  vec2 scenePoint = (vec3(coord, 1.0) * view).xy;
+  half4 sceneColor = scene.eval(scenePoint);
   ${result}
 }`;
 }
@@ -283,7 +284,7 @@ OBR.onReady(async () => {
       width: 226,
       height: 54,
       anchorReference: "POSITION",
-      anchorPosition: { left: 300, top: 16 },
+      anchorPosition: { left: 360, top: 16 },
       anchorOrigin: { horizontal: "LEFT", vertical: "TOP" },
       transformOrigin: { horizontal: "LEFT", vertical: "TOP" },
       hidePaper: true,
