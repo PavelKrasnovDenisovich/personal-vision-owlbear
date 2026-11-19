@@ -11,6 +11,7 @@ const PLACE_MODE_ID = `${EXTENSION_ID}/place-light`;
 const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const LIGHT_DATA_KEY = `${EXTENSION_ID}/light-data`;
+const MASK_EFFECT_KEY = `${EXTENSION_ID}/local-mask-effect`;
 const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
 const extensionUrl = (path) => {
   const url = new URL(path, location.href);
@@ -21,6 +22,12 @@ const visionUrl = extensionUrl("./viewer.html").href;
 
 function selectVision(state, playerId) {
   return Object.values(state?.assignments || {}).find((entry) => entry.playerId === playerId) || null;
+}
+
+async function clearLocalMask() {
+  const localItems = await OBR.scene.local.getItems().catch(() => []);
+  const maskIds = localItems.filter((item) => item.metadata?.[MASK_EFFECT_KEY]).map((item) => item.id);
+  if (maskIds.length) await OBR.scene.local.deleteItems(maskIds).catch(() => {});
 }
 
 OBR.onReady(async () => {
@@ -42,6 +49,7 @@ OBR.onReady(async () => {
         const metadata = await OBR.tool.getMetadata(TOOL_ID);
         if (metadata?.[PREVIEW_ACTIVE_KEY] || context.metadata?.[PREVIEW_ACTIVE_KEY]) {
           await OBR.tool.setMetadata(TOOL_ID, { [PREVIEW_ACTIVE_KEY]: false });
+          await clearLocalMask();
           await OBR.popover.close(EXIT_POPOVER_ID).catch(() => {});
           await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: extensionUrl("./").href, width: 520, height: 760 });
           await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
@@ -186,6 +194,7 @@ OBR.onReady(async () => {
       await OBR.modal.open({ id: MODAL_ID, url: visionUrl, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
       modalOpen = true;
     } else if (!assignment && modalOpen) {
+      await clearLocalMask();
       await OBR.modal.close(MODAL_ID).catch(() => {});
       modalOpen = false;
     }
@@ -193,7 +202,7 @@ OBR.onReady(async () => {
 
   const readState = async () => {
     if (!(await OBR.scene.isReady())) {
-      if (modalOpen) { await OBR.modal.close(MODAL_ID).catch(() => {}); modalOpen = false; }
+      if (modalOpen) { await clearLocalMask(); await OBR.modal.close(MODAL_ID).catch(() => {}); modalOpen = false; }
       return;
     }
     const metadata = await OBR.scene.getMetadata();

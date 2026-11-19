@@ -1,11 +1,11 @@
-import OBR from "@owlbear-rodeo/sdk";
+import OBR, { buildEffect } from "@owlbear-rodeo/sdk";
 import { version as extensionVersion } from "../package.json";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const LIGHT_DATA_KEY = `${EXTENSION_ID}/light-data`;
-const LIGHT_PROFILE_KEY = `${EXTENSION_ID}/light`;
+const MASK_EFFECT_KEY = `${EXTENSION_ID}/local-mask-effect`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const EXIT_POPOVER_ID = `${EXTENSION_ID}/gm-preview-exit`;
 const canvas = document.querySelector("#vision");
@@ -14,15 +14,16 @@ const extensionUrl = (path) => {
   url.searchParams.set("v", extensionVersion);
   return url;
 };
-const displayContext = canvas.getContext("2d", { alpha: true });
-const frameCanvas = document.createElement("canvas");
-const context = frameCanvas.getContext("2d", { alpha: true });
+const context = canvas.getContext("2d", { alpha: true });
 let sceneItems = [];
 let sceneState = { assignments: {}, lights: {} };
 let gridDpi = 70;
 let drawing = false;
 let drawPending = false;
 let isGmPreview = false;
+let maskEffectId = null;
+let maskSignature = "";
+let maskLocalStateReady = false;
 
 document.documentElement.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden;pointer-events:none";
 document.body.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden;pointer-events:none";
@@ -64,64 +65,91 @@ async function screenPoint(worldPoint) {
   catch { return null; }
 }
 
-function eraseCircle(x, y, radius, strength) {
-  if (!(radius > 0)) return;
-  const edge = Math.max(3, radius * 0.035);
-  const gradient = context.createRadialGradient(x, y, Math.max(0, radius - edge), x, y, radius);
-  gradient.addColorStop(0, `rgba(0,0,0,${strength})`);
-  gradient.addColorStop(1, "rgba(0,0,0,0)");
-  context.globalCompositeOperation = "destination-out";
-  context.fillStyle = gradient;
-  context.beginPath();
-  context.arc(x, y, radius, 0, Math.PI * 2);
-  context.fill();
-}
-
-function tintCircle(circle) {
-  if (!(circle.radius > 0)) return;
-  const gradient = context.createRadialGradient(circle.x, circle.y, 0, circle.x, circle.y, circle.radius);
-  gradient.addColorStop(0, "rgba(180,185,195,0.28)");
-  gradient.addColorStop(0.82, "rgba(180,185,195,0.20)");
-  gradient.addColorStop(1, "rgba(180,185,195,0)");
-  context.globalCompositeOperation = "source-over";
-  context.fillStyle = gradient;
-  context.beginPath();
-  context.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-  context.fill();
-}
-
-function revealPlate(x, y, width, height) {
-  context.save();
-  context.globalCompositeOperation = "destination-out";
-  context.fillStyle = "#000";
-  context.fillRect(x, y, width, height);
-  context.restore();
-}
-
-function revealOwlbearControls(width, height) {
-  // Solid transparent plates match Owlbear's floating control surfaces. Small
-  // circular holes drift off target with browser zoom and different layouts.
-  revealPlate(0, 0, Math.min(360, width), Math.min(108, height)); // exit + top-left controls
-  revealPlate(Math.max(0, width - 100), 62, Math.min(100, width), Math.min(570, height - 62)); // right rail
-  revealPlate(Math.max(0, width / 2 - 275), Math.max(0, height - 62), Math.min(550, width), Math.min(62, height)); // bottom tools
-}
-
-function lightFromProfile(value) {
+function lightFromName(name) {
   const profiles = {
     candle: { name: "Свеча", brightCells: 1, dimCells: 2 },
+    свеча: { name: "Свеча", brightCells: 1, dimCells: 2 },
     torch: { name: "Факел", brightCells: 4, dimCells: 8 },
+    факел: { name: "Факел", brightCells: 4, dimCells: 8 },
     lantern: { name: "Фонарь", brightCells: 6, dimCells: 12 },
+    фонарь: { name: "Фонарь", brightCells: 6, dimCells: 12 },
   };
-  if (typeof value === "string") {
-    const profileId = value.trim().toLowerCase();
-    if (profiles[profileId]) return profiles[profileId];
-    try { value = JSON.parse(value); } catch { return null; }
+  return profiles[String(name || "").trim().toLocaleLowerCase("ru-RU")] || null;
+}
+
+function maskShader(circles, blind) {
+  const declarations = circles.map((_, index) => `uniform vec3 center${index}; uniform float strength${index}; uniform float tint${index};`).join("\n");
+  const samples = circles.map((_, index) => `
+    float d${index} = distance(screenPoint, center${index}.xy);
+    float edge${index} = max(3.0, center${index}.z * 0.035);
+    float fade${index} = 1.0 - smoothstep(center${index}.z - edge${index}, center${index}.z, d${index});
+    visibility = max(visibility, fade${index} * strength${index});
+    tintAmount = max(tintAmount, fade${index} * tint${index});`).join("\n");
+  const result = blind
+    ? "return half4(0.0, 0.0, 0.0, 1.0);"
+    : `float visibility = 0.0;
+  float tintAmount = 0.0;
+  ${samples}
+  vec3 color = sceneColor.rgb * visibility;
+  float gray = dot(sceneColor.rgb, vec3(0.299, 0.587, 0.114));
+  color = mix(color, vec3(gray), tintAmount * 0.25);
+  return half4(color, 1.0);`;
+  return `uniform shader scene;
+uniform mat3 view;
+${declarations}
+half4 main(float2 coord) {
+  vec2 screenPoint = (vec3(coord, 1.0) * view).xy;
+  half4 sceneColor = scene.eval(screenPoint);
+  ${result}
+}`;
+}
+
+async function syncMapMask(enabled, circles, blind) {
+  let localItems = [];
+  if (!maskLocalStateReady) {
+    localItems = await OBR.scene.local.getItems();
+    maskEffectId = localItems.find((item) => item.metadata?.[MASK_EFFECT_KEY])?.id || null;
+    maskLocalStateReady = true;
   }
-  if (!value || typeof value !== "object") return null;
-  const brightCells = Number(value.brightCells);
-  const dimCells = Number(value.dimCells);
-  if (!Number.isFinite(brightCells) || !Number.isFinite(dimCells)) return null;
-  return { name: value.name || "Настраиваемый свет", brightCells: Math.max(0, brightCells), dimCells: Math.max(0, dimCells), tint: Boolean(value.tint) };
+  if (!enabled) {
+    if (maskEffectId) await OBR.scene.local.deleteItems([maskEffectId]).catch(() => {});
+    maskEffectId = null;
+    maskSignature = "";
+    return;
+  }
+
+  const signature = JSON.stringify({ blind, circles: circles.map(({ x, y, radius, strength, tint }) => [x, y, radius, strength, Boolean(tint)]) });
+  if (signature === maskSignature && maskEffectId) return;
+  const uniforms = circles.flatMap((circle, index) => [
+    { name: `center${index}`, value: { x: circle.x, y: circle.y, z: circle.radius } },
+    { name: `strength${index}`, value: circle.strength },
+    { name: `tint${index}`, value: circle.tint ? 1 : 0 },
+  ]);
+  const next = buildEffect()
+    .effectType("VIEWPORT")
+    .layer("POST_PROCESS")
+    .name("Личный обзор · маска игрока")
+    .locked(true)
+    .disableHit(true)
+    .metadata({ [MASK_EFFECT_KEY]: true })
+    .sksl(maskShader(circles, blind))
+    .uniforms(uniforms)
+    .build();
+
+  if (maskEffectId) {
+    try {
+      await OBR.scene.local.updateItems([maskEffectId], (items) => {
+        Object.assign(items[0], { sksl: next.sksl, uniforms: next.uniforms, visible: true });
+      });
+    } catch {
+      maskEffectId = null;
+    }
+  }
+  if (!maskEffectId) {
+    await OBR.scene.local.addItems([next]);
+    maskEffectId = next.id;
+  }
+  maskSignature = signature;
 }
 
 function drawLightGuides(circles) {
@@ -182,7 +210,7 @@ async function draw() {
           if (item.metadata?.[LIGHT_MARKER_KEY] && lightData) {
             lightEntries.set(item.id, { ...lightData, position: item.position, marker: true });
           }
-          const profile = item.layer === "PROP" ? lightFromProfile(item.metadata?.[LIGHT_PROFILE_KEY]) : null;
+          const profile = lightFromName(item.name);
           if (profile) lightEntries.set(item.id, { ...profile, position: item.position, marker: true, propLight: true });
         }
         for (const [itemId, light] of lightEntries) {
@@ -199,8 +227,8 @@ async function draw() {
         }
       }
 
-      // Render offscreen, then swap one finished frame onto the visible canvas. This avoids
-      // exposing the opaque mask while viewport and item geometry are fetched asynchronously.
+      // The black mask is a local Owlbear viewport effect, so it only covers the
+      // scene canvas. Owlbear toolbars, menus, and future modules remain untouched.
       const width = window.innerWidth;
       const height = window.innerHeight;
       const dpr = window.devicePixelRatio || 1;
@@ -210,32 +238,14 @@ async function draw() {
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
       }
-      if (frameCanvas.width !== pixelWidth || frameCanvas.height !== pixelHeight) {
-        frameCanvas.width = pixelWidth;
-        frameCanvas.height = pixelHeight;
-      }
+      const masked = Boolean(assignment) && (blind || ambient === "dark");
+      await syncMapMask(masked, circles, blind);
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, pixelWidth, pixelHeight);
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      context.clearRect(0, 0, width, height);
       context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
-      const masked = Boolean(assignment) && (blind || ambient === "dark");
-      if (masked) {
-        context.fillStyle = "rgba(0,0,0,1)";
-        context.fillRect(0, 0, width, height);
-        for (const circle of circles.filter((entry) => entry.vision || entry.self)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-        for (const circle of circles.filter((entry) => entry.vision && entry.tint)) tintCircle(circle);
-        for (const circle of circles.filter((entry) => entry.light && entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-        for (const circle of circles.filter((entry) => entry.light && entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
-        for (const circle of circles.filter((entry) => entry.tint && entry.light)) tintCircle(circle);
-        revealOwlbearControls(width, height);
-        drawLightGuides(circles);
-      } else if (isGmPreview) {
-        drawLightGuides(circles);
-      }
-      context.globalCompositeOperation = "source-over";
-      displayContext.setTransform(1, 0, 0, 1, 0, 0);
-      displayContext.clearRect(0, 0, pixelWidth, pixelHeight);
-      displayContext.drawImage(frameCanvas, 0, 0);
+      if (isGmPreview) drawLightGuides(circles);
     } while (drawPending);
   } finally {
     drawing = false;
