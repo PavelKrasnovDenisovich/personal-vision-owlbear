@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Книга партии">
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="#182019" stroke="#c9e3a1" stroke-width="3"/>
+  <path d="M11 16c8-2 15-1 21 3v32c-6-4-13-5-21-3V16Z" fill="#293528" stroke="#e0edcc" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M53 16c-8-2-15-1-21 3v32c6-4 13-5 21-3V16Z" fill="#35432f" stroke="#e0edcc" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="m42 20 9 5-2 16-9 8-9-7 3-15 8-7Z" fill="#e5bd77" stroke="#fff0c8" stroke-width="2" stroke-linejoin="round"/>
+  <path d="m40 27 9 3m-9-3 0 16m9-13-9 13m9-13-5 11m-4-14 9 3" fill="none" stroke="#76552f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 24h9m-9 6h8m-8 6h7" stroke="#c9e3a1" stroke-width="2" stroke-linecap="round"/>
+</svg>

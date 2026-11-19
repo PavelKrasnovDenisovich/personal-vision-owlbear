@@ -4,7 +4,45 @@ const EXTENSION_ID = "ru.codex.party-book";
 const POPOVER_ID = `${EXTENSION_ID}/character-sheet`;
 const BATTLE_TOOL_ID = `${EXTENSION_ID}/battle-panel`;
 const BATTLE_POPOVER_ID = `${EXTENSION_ID}/battle-panel-popover`;
-OBR.onReady(() => {
+const normalizeName = (name) => String(name || "").trim().toLocaleLowerCase("ru");
+
+async function autoBindNamedTokens(ownerKey) {
+  try {
+    if (!(await OBR.scene.isReady())) return;
+    const stateKey = `party-book-v1:${ownerKey}`;
+    const bindingsKey = `party-book-owlbear-bindings-v1:${ownerKey}`;
+    const state = JSON.parse(localStorage.getItem(stateKey) || "null");
+    const characters = state?.characters || [];
+    if (!characters.length) return;
+    let bindings = {};
+    try { bindings = JSON.parse(localStorage.getItem(bindingsKey) || "{}") || {}; } catch { bindings = {}; }
+    const sceneTokens = await OBR.scene.items.getItems((item) => item.layer === "CHARACTER" && item.visible !== false);
+    let changed = false;
+    for (const token of sceneTokens) {
+      if (characters.some((character) => character.id === bindings[token.id])) continue;
+      const match = characters.find((character) => normalizeName(character.name) === normalizeName(token.name));
+      if (match) {
+        bindings[token.id] = match.id;
+        changed = true;
+      }
+    }
+    if (changed) localStorage.setItem(bindingsKey, JSON.stringify(bindings));
+  } catch (error) {
+    console.warn("Не удалось автоматически связать токены с листами персонажей", error);
+  }
+}
+
+OBR.onReady(async () => {
+  if (await OBR.player.getRole() === "GM") {
+    const ownerKey = encodeURIComponent(await OBR.player.getId());
+    const syncBindings = () => autoBindNamedTokens(ownerKey);
+    await syncBindings();
+    OBR.scene.items.onChange(syncBindings);
+    OBR.scene.onReadyChange(syncBindings);
+    window.addEventListener("storage", (event) => {
+      if (event.key === `party-book-v1:${ownerKey}` || event.key === `party-book-owlbear-bindings-v1:${ownerKey}`) syncBindings();
+    });
+  }
   const presentationModalId = `${EXTENSION_ID}/presentation-modal`;
   OBR.broadcast.onMessage(`${EXTENSION_ID}/presentation`, async (event) => {
     const data = event.data;
@@ -30,8 +68,8 @@ OBR.onReady(() => {
   OBR.tool.create({
     id: BATTLE_TOOL_ID,
     icons: [{
-      icon: new URL("./icon.svg", location.href).toString(),
-      label: "Боевая панель",
+      icon: new URL("./book-icon-v2.svg", location.href).toString(),
+      label: "Книга партии · боевая панель",
       filter: { roles: ["GM"] },
     }],
     onClick() {
@@ -47,8 +85,8 @@ OBR.onReady(() => {
   OBR.contextMenu.create({
     id: `${EXTENSION_ID}/context-menu`,
     icons: [{
-      icon: new URL("./icon.svg", location.href).toString(),
-      label: "Открыть лист персонажа",
+      icon: new URL("./book-icon-v2.svg", location.href).toString(),
+      label: "Книга партии · лист персонажа",
       filter: { every: [{ key: "layer", value: "CHARACTER" }], roles: ["GM"] },
     }],
     async onClick(context, elementId) {

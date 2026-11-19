@@ -7,7 +7,6 @@ let BINDINGS_KEY = "party-book-owlbear-bindings-v1";
 let EXCLUDED_KEY = "party-book-owlbear-combat-excluded-v1";
 let INITIATIVE_KEY = "party-book-owlbear-initiative-v1";
 let TOKEN_HP_KEY = "party-book-owlbear-token-hp-v1";
-const STEPS = [1, 3, 5, 10, 20];
 const root = document.querySelector("#app");
 let mode = "damage";
 const selectedSteps = {};
@@ -47,7 +46,7 @@ function render(message = "") {
     const max = Math.max(0, Number(hp?.max) || 0);
     const pct = max ? Math.min(100, current / max * 100) : 0;
     const temp = Math.max(0, Number(hp?.temp) || 0);
-    const tokenStep = selectedSteps[token.id] ?? 2;
+    const tokenStep = selectedSteps[token.id] ?? 1;
     const dead = character
       ? (character.statusEffects || []).some((s) => s.id === "dead")
       : Boolean(tokenHp[token.id]?.dead);
@@ -57,9 +56,9 @@ function render(message = "") {
       ? `<img src="${esc(imageUrl)}" alt="${esc(token.name || "Токен")}">`
       : `<span>${dead ? "💀" : "🎲"}</span>`;
     return `<article class="token-card ${dead ? "is-dead" : ""}">
-      <div class="token-top"><div class="initiative-order">${index + 1}</div><div class="token-avatar">${avatar}${dead ? `<span class="death-mark" title="Мёртв">💀</span>` : ""}</div><div class="token-title"><strong>${esc(token.name || "Без имени")}</strong><small>${character ? esc(character.name) : "Без листа персонажа"}${dead ? " · МЁРТВ" : ""}</small></div><label class="initiative-control"><small>ИНИЦ.</small><span class="initiative-entry"><button class="roll-initiative" type="button" data-roll-initiative="${esc(token.id)}" title="Бросить инициативу" aria-label="Бросить инициативу для ${esc(token.name)}">🎲</button><input type="number" step="1" data-initiative="${esc(token.id)}" value="${initiative}" placeholder="—" aria-label="Текущая инициатива для ${esc(token.name)}"></span></label><div class="hp-number">${current}<small> / ${max}</small></div></div>
+      <div class="token-top"><div class="initiative-order">${index + 1}</div><div class="token-avatar">${avatar}${dead ? `<span class="death-mark" title="Мёртв">💀</span>` : ""}</div><div class="token-title"><strong>${esc(token.name || "Без имени")}</strong><small>${character ? `${esc(character.name)} · КД ${esc(character.stats?.ac ?? "—")}` : "Без листа персонажа"}${dead ? " · МЁРТВ" : ""}</small></div><label class="initiative-control"><small>ИНИЦ.</small><span class="initiative-entry"><button class="roll-initiative" type="button" data-roll-initiative="${esc(token.id)}" title="Бросить инициативу" aria-label="Бросить инициативу для ${esc(token.name)}">🎲</button><input type="number" step="1" data-initiative="${esc(token.id)}" value="${initiative}" placeholder="—" aria-label="Текущая инициатива для ${esc(token.name)}"></span></label><div class="hp-number">${current}<small> / ${max}</small></div></div>
       ${character ? `<div class="hp-meter"><span style="width:${pct}%"></span></div>${temp ? `<div class="temp-hp">Временные HP: ${temp}</div>` : `<div class="temp-hp">&nbsp;</div>`}` : `<div class="standalone-hp"><label>ТЕКУЩИЕ HP<input type="number" min="0" step="1" value="${current}" data-token-hp="current" data-token-id="${esc(token.id)}"></label><label>МАКС. HP<input type="number" min="0" step="1" value="${max}" data-token-hp="max" data-token-id="${esc(token.id)}"></label></div><div class="hp-meter"><span style="width:${pct}%"></span></div>`}
-      <div class="change-controls"><div class="mode-toggle"><button class="mode-button ${mode === "damage" ? "selected damage" : ""}" data-mode="damage" aria-label="Урон">−</button><button class="mode-button ${mode === "heal" ? "selected heal" : ""}" data-mode="heal" aria-label="Лечение">＋</button></div><div class="slider-wrap"><div class="slider-caption"><span>${mode === "damage" ? "Урон" : "Лечение"}</span><b>${mode === "damage" ? "−" : "+"}${STEPS[tokenStep]} HP</b></div><input type="range" min="0" max="4" step="1" value="${tokenStep}" data-step="${esc(token.id)}" aria-label="Размер изменения HP"></div><button class="apply-change ${mode}" data-apply="${esc(token.id)}">${mode === "damage" ? "Нанести" : "Вылечить"}</button></div>
+      <div class="change-controls"><div class="mode-toggle"><button class="mode-button ${mode === "damage" ? "selected damage" : ""}" data-mode="damage" aria-label="Урон">−</button><button class="mode-button ${mode === "heal" ? "selected heal" : ""}" data-mode="heal" aria-label="Лечение">＋</button></div><div class="slider-wrap"><div class="slider-caption"><span>${mode === "damage" ? "Урон" : "Лечение"}</span><b>${mode === "damage" ? "−" : "+"}${tokenStep} HP</b></div><input type="range" min="1" max="50" step="1" value="${tokenStep}" data-step="${esc(token.id)}" aria-label="Размер изменения HP от 1 до 50"></div><button class="apply-change ${mode}" data-apply="${esc(token.id)}">${mode === "damage" ? "Нанести" : "Вылечить"}</button></div>
       <button class="exclude-token" data-exclude-token="${esc(token.id)}">Убрать из боя</button>
     </article>`;
   }).join("");
@@ -75,7 +74,7 @@ function render(message = "") {
   root.querySelectorAll("[data-step]").forEach((input) => input.addEventListener("input", () => {
     selectedSteps[input.dataset.step] = Number(input.value);
     const label = input.closest(".slider-wrap")?.querySelector(".slider-caption b");
-    if (label) label.textContent = `${mode === "damage" ? "−" : "+"}${STEPS[selectedSteps[input.dataset.step]]} HP`;
+    if (label) label.textContent = `${mode === "damage" ? "−" : "+"}${selectedSteps[input.dataset.step]} HP`;
   }));
   root.querySelector("#refresh")?.addEventListener("click", refresh);
   root.querySelectorAll("[data-apply]").forEach((button) => button.addEventListener("click", () => applyChange(button.dataset.apply)));
@@ -132,7 +131,7 @@ function applyChange(tokenId) {
   const record = character?.stats?.hp || (tokenHp[tokenId] ||= { current: 0, max: 0, temp: 0, dead: false });
   const hp = record;
   const previousCurrent = Number(hp.current) || 0;
-  const amount = STEPS[selectedSteps[tokenId] ?? 2];
+  const amount = Math.max(1, Math.min(50, Number(selectedSteps[tokenId]) || 1));
   if (mode === "damage") {
     const absorbed = Math.min(Math.max(0, Number(hp.temp) || 0), amount);
     hp.temp = Math.max(0, (Number(hp.temp) || 0) - absorbed);
@@ -174,6 +173,17 @@ async function refresh() {
   try {
     tokens = await OBR.scene.items.getItems((item) => item.layer === "CHARACTER" && item.visible !== false);
   } catch { tokens = []; }
+  let bindingsChanged = false;
+  const characters = state?.characters || [];
+  for (const token of tokens) {
+    if (characters.some((character) => character.id === bindings[token.id])) continue;
+    const match = characters.find((character) => normalized(character.name) === normalized(token.name));
+    if (match) {
+      bindings[token.id] = match.id;
+      bindingsChanged = true;
+    }
+  }
+  if (bindingsChanged) localStorage.setItem(BINDINGS_KEY, JSON.stringify(bindings));
   render();
 }
 

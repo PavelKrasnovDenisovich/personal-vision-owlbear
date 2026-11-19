@@ -24,7 +24,7 @@ OBR.onReady(async () => {
     await OBR.tool.create({
       id: TOOL_ID,
       icons: [{
-        icon: new URL("./icon.svg", location.href).toString(),
+        icon: new URL("./eye-icon-v2.svg", location.href).toString(),
         label: "Личный обзор · настройка",
         filter: { roles: ["GM"] },
       }],
@@ -43,7 +43,7 @@ OBR.onReady(async () => {
     await OBR.tool.createMode({
       id: PLACE_MODE_ID,
       icons: [{
-        icon: new URL("./icon.svg", location.href).toString(),
+        icon: new URL("./eye-icon-v2.svg", location.href).toString(),
         label: "Личный обзор · поставить источник света",
         filter: { roles: ["GM"] },
       }],
