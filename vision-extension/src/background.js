@@ -1,4 +1,4 @@
-import OBR, { buildImage } from "@owlbear-rodeo/sdk";
+import OBR, { buildShape } from "@owlbear-rodeo/sdk";
 import { version as extensionVersion } from "../package.json";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
@@ -45,7 +45,7 @@ OBR.onReady(async () => {
           await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
           return false;
         }
-        OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+        OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: extensionUrl("./").href, width: 520, height: 760 });
         return true;
       },
     });
@@ -70,19 +70,26 @@ OBR.onReady(async () => {
           const dpiValue = Number(await OBR.scene.grid.getDpi());
           const dpi = dpiValue > 0 ? dpiValue : 70;
           const lightData = {
-            name: `💡 Источник света · ${preset.name}`,
+            name: `Источник света · ${preset.name}`,
             presetName: preset.name,
             brightCells: Number(preset.brightCells) || 0,
             dimCells: Number(preset.dimCells) || 0,
             tint: Boolean(preset.tint),
             marker: true,
           };
-          const marker = buildImage(
-            { width: 64, height: 64, mime: "image/svg+xml", url: extensionUrl("./light-marker.svg").href },
-            { offset: { x: 0, y: 0 }, dpi },
-          )
-            .name(`Источник света · ${preset.name}`)
+          const markerSize = Math.max(60, dpi * 0.95);
+          const marker = buildShape()
+            .shapeType("CIRCLE")
+            .width(markerSize)
+            .height(markerSize)
+            .fillColor("#ffd04d")
+            .fillOpacity(1)
+            .strokeColor("#fff1a9")
+            .strokeOpacity(1)
+            .strokeWidth(5)
+            .name(`Фонарь · ${preset.name}`)
             .position(event.pointerPosition)
+            .zIndex(Date.now())
             .layer("PROP")
             .visible(true)
             .locked(false)
@@ -90,6 +97,8 @@ OBR.onReady(async () => {
             .build();
 
           await OBR.scene.items.addItems([marker]);
+          const created = await OBR.scene.items.getItems([marker.id]);
+          if (!created.length) throw new Error("Owlbear не вернул созданную метку источника света");
           const sceneMetadata = await OBR.scene.getMetadata();
           const state = sceneMetadata[STATE_KEY] || { ambient: "bright", assignments: {}, lights: {} };
           state.assignments ||= {};

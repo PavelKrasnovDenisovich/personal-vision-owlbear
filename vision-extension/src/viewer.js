@@ -22,7 +22,6 @@ let gridDpi = 70;
 let drawing = false;
 let drawPending = false;
 let isGmPreview = false;
-let viewportScreenRect = null;
 
 document.documentElement.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden;pointer-events:none";
 document.body.style.cssText = "width:100%;height:100%;margin:0;background:transparent;overflow:hidden;pointer-events:none";
@@ -62,26 +61,6 @@ async function getCenter(itemId) {
 async function screenPoint(worldPoint) {
   try { return await OBR.viewport.transformPoint(worldPoint); }
   catch { return null; }
-}
-
-async function getViewportScreenRect(width, height) {
-  try {
-    const [position, viewportWidth, viewportHeight] = await Promise.all([
-      OBR.viewport.getPosition(),
-      OBR.viewport.getWidth(),
-      OBR.viewport.getHeight(),
-    ]);
-    const center = await screenPoint(position);
-    if (!(viewportWidth > 0) || !(viewportHeight > 0)) return null;
-    const x = Math.max(0, (center?.x ?? width / 2) - viewportWidth / 2);
-    const y = Math.max(0, (center?.y ?? height / 2) - viewportHeight / 2);
-    return {
-      x,
-      y,
-      width: Math.max(0, Math.min(viewportWidth, width - x)),
-      height: Math.max(0, Math.min(viewportHeight, height - y)),
-    };
-  } catch { return null; }
 }
 
 function eraseCircle(x, y, radius, strength) {
@@ -190,9 +169,6 @@ async function draw() {
       const dpr = window.devicePixelRatio || 1;
       const pixelWidth = Math.round(width * dpr);
       const pixelHeight = Math.round(height * dpr);
-      // Fall back to the full extension viewport if Owlbear's screen transform
-      // is unavailable during initialization. This keeps the vision mask active.
-      const viewportRect = viewportScreenRect || { x: 0, y: 0, width, height };
       if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
@@ -206,31 +182,21 @@ async function draw() {
       context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
       const masked = Boolean(assignment) && (blind || ambient === "dark");
-      if (masked && viewportRect) {
-        context.save();
-        context.beginPath();
-        context.rect(viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height);
-        context.clip();
+      if (masked) {
         context.fillStyle = "rgba(0,0,0,0.97)";
-        context.fillRect(viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height);
+        context.fillRect(0, 0, width, height);
         for (const circle of circles.filter((entry) => entry.vision || entry.self)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.vision && entry.tint)) tintCircle(circle);
         for (const circle of circles.filter((entry) => entry.light && entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.light && entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.tint && entry.light)) tintCircle(circle);
-        // The fullscreen mask is above the scene, so leave clear windows for
-        // Owlbear's tool rail and token dock. Pointer events already pass through.
-        context.clearRect(0, 0, Math.min(width, 78), height);
+        // The canvas is a fullscreen modal above Owlbear's interface. Clear the
+        // tool rail and token dock after drawing the mask so those controls remain visible.
+        context.clearRect(0, 0, Math.min(width, 92), height);
         context.clearRect(0, Math.max(0, height - 172), width, Math.min(172, height));
         drawLightGuides(circles);
-        context.restore();
-      } else if (isGmPreview && viewportRect) {
-        context.save();
-        context.beginPath();
-        context.rect(viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height);
-        context.clip();
+      } else if (isGmPreview) {
         drawLightGuides(circles);
-        context.restore();
       }
       context.globalCompositeOperation = "source-over";
       displayContext.setTransform(1, 0, 0, 1, 0, 0);
@@ -300,15 +266,7 @@ OBR.onReady(async () => {
   OBR.scene.onReadyChange(async (ready) => { if (ready) await refreshScene(); await draw(); });
   window.addEventListener("focus", draw);
   window.setInterval(draw, 160);
-  viewportScreenRect = await getViewportScreenRect(window.innerWidth, window.innerHeight);
-  window.addEventListener("resize", async () => {
-    viewportScreenRect = await getViewportScreenRect(window.innerWidth, window.innerHeight);
-    draw();
-  });
-  if (isGmPreview) window.setInterval(async () => {
-    await refreshScene();
-    viewportScreenRect = await getViewportScreenRect(window.innerWidth, window.innerHeight);
-    await draw();
-  }, 650);
+  window.addEventListener("resize", draw);
+  if (isGmPreview) window.setInterval(async () => { await refreshScene(); await draw(); }, 650);
   await draw();
 });
