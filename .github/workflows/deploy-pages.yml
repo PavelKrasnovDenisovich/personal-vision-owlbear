@@ -61,6 +61,20 @@ jobs:
           cp -R vision-extension/dist/. site/vision/
           touch site/.nojekyll
 
+      - name: Verify assembled extension versions
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, existsSync } from "node:fs";
+          for (const [path, expected] of [["site/manifest.json", "1.2.5"], ["site/vision/manifest.json", "0.2.9"]]) {
+            const manifest = JSON.parse(readFileSync(path, "utf8"));
+            console.log(`${manifest.name}: v${manifest.version} (${path})`);
+            if (manifest.version !== expected) throw new Error(`Unexpected version in ${path}: ${manifest.version}`);
+          }
+          for (const path of ["site/vision/background.html", "site/vision/viewer.html", "site/vision/light-marker.svg"]) {
+            if (!existsSync(path)) throw new Error(`Missing deployment file: ${path}`);
+          }
+          NODE
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 

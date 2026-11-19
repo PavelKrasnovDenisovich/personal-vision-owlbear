@@ -1,5 +1,6 @@
 import OBR from "@owlbear-rodeo/sdk";
 import "./style.css";
+import { version as extensionVersion } from "../package.json";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
@@ -9,6 +10,11 @@ const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
 const root = document.querySelector("#app");
+const extensionUrl = (path) => {
+  const url = new URL(path, location.href);
+  url.searchParams.set("v", extensionVersion);
+  return url;
+};
 let roomState = { assignments: {}, lights: {} };
 let players = [];
 let items = [];
@@ -64,7 +70,7 @@ function render() {
   }).join("");
 
   root.innerHTML = `<main class="panel">
-    <header><div class="eyebrow">OWLBEAR RODEO · ОТДЕЛЬНОЕ РАСШИРЕНИЕ</div><h1>Личный обзор</h1><p>Каждый игрок видит маску, рассчитанную для его токена.</p></header>
+    <header><div class="eyebrow">OWLBEAR RODEO · ОТДЕЛЬНОЕ РАСШИРЕНИЕ</div><h1>Личный обзор <span class="version-tag">v${extensionVersion}</span></h1><p>Каждый игрок видит маску, рассчитанную для его токена.</p></header>
     <section class="notice"><strong>Как работает эта версия</strong><span>Маска действует отдельно для каждого игрока. Текущий токен и радиусы можно проверить на экране мастера без игрока и без сохранения.</span><span>Круги не учитывают стены и линию видимости.</span></section>
     <section class="section ambient-section"><label>Освещение сцены<select id="ambient-select"><option value="bright" ${roomState.ambient === "bright" ? "selected" : ""}>Сцена освещена · обычное зрение</option><option value="dark" ${roomState.ambient === "dark" ? "selected" : ""}>Темнота · без тёмного зрения видны только источники света</option></select></label><button id="save-ambient">Сохранить освещение сцены</button></section>
     <section class="section"><div class="section-head"><div><h2>Токен и игрок</h2><p>Один игрок и один токен могут быть связаны только один раз.</p></div></div>
@@ -132,12 +138,25 @@ function render() {
     await OBR.popover.close(`${EXTENSION_ID}/manager`);
     await OBR.tool.activateTool(`${EXTENSION_ID}/gm-tool`);
     await OBR.tool.activateMode(`${EXTENSION_ID}/gm-tool`, PLACE_MODE_ID);
-    OBR.notification.show(`Выбран профиль «${LIGHT_PRESETS[presetId].name}». Щёлкните по карте, чтобы поставить источник.`);
+    let modeIsActive = false;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const [activeTool, activeMode] = await Promise.all([OBR.tool.getActiveTool(), OBR.tool.getActiveToolMode()]);
+      if (activeTool === `${EXTENSION_ID}/gm-tool` && activeMode === PLACE_MODE_ID) {
+        modeIsActive = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!modeIsActive) {
+      OBR.notification.show("Режим установки не включился. Повторно нажмите «Поставить источник».");
+      return;
+    }
+    OBR.notification.show(`Режим установки активен (${extensionVersion}). Щёлкните по карте, чтобы поставить «${LIGHT_PRESETS[presetId].name}».`);
   };
   root.querySelector("#preview-current").onclick = async () => {
     const tokenId = root.querySelector("#token-select").value;
     if (!tokenId) return OBR.notification.show("Для предпросмотра выберите токен персонажа на карте.");
-    const url = new URL("./viewer.html", location.href);
+    const url = extensionUrl("./viewer.html");
     url.searchParams.set("previewToken", tokenId);
     url.searchParams.set("previewMode", root.querySelector("#mode-select").value);
     url.searchParams.set("previewDark", String(clamp(root.querySelector("#dark-range").value)));
@@ -149,7 +168,7 @@ function render() {
   };
   root.querySelectorAll("[data-preview-assignment]").forEach((button) => button.onclick = async () => {
     const entry = roomState.assignments[button.dataset.previewAssignment];
-    const url = new URL("./viewer.html", location.href);
+    const url = extensionUrl("./viewer.html");
     url.searchParams.set("previewPlayer", entry.playerId);
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
     await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PREVIEW_ACTIVE_KEY]: true });

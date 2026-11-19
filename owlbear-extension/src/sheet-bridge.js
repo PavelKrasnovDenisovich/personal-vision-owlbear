@@ -1,5 +1,5 @@
 import OBR, { buildImageUpload } from "@owlbear-rodeo/sdk";
-import { STATUS_ICONS, syncStatusLabel as updateStatusLabel } from "./status-label.js";
+import { STATUS_BADGES, syncStatusLabel as updateStatusLabel } from "./status-label.js";
 
 const LEGACY_DATA_KEY = "ru.codex.party-book/character";
 const PRESENTATION_CHANNEL = "ru.codex.party-book/presentation";
@@ -202,7 +202,7 @@ OBR.onReady(async () => {
   let labelQueue = Promise.resolve();
   const syncStatusLabel = (ch) => {
     const statuses = ch?.statusEffects || [];
-    const signature = JSON.stringify(statuses.map((status) => [status.id, STATUS_ICONS[status.id] || status.icon, status.name]));
+    const signature = JSON.stringify(statuses.map((status) => [status.id, STATUS_BADGES[status.id] || "!!", status.name]));
     if (signature === lastStatusSignature) return;
     lastStatusSignature = signature;
     labelQueue = labelQueue.then(() => updateStatusLabel(itemId, ch));

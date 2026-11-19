@@ -1,4 +1,5 @@
 import OBR from "@owlbear-rodeo/sdk";
+import { version as extensionVersion } from "../package.json";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
@@ -7,6 +8,11 @@ const LIGHT_DATA_KEY = `${EXTENSION_ID}/light-data`;
 const PREVIEW_MODAL_ID = `${EXTENSION_ID}/gm-preview`;
 const EXIT_POPOVER_ID = `${EXTENSION_ID}/gm-preview-exit`;
 const canvas = document.querySelector("#vision");
+const extensionUrl = (path) => {
+  const url = new URL(path, location.href);
+  url.searchParams.set("v", extensionVersion);
+  return url;
+};
 const displayContext = canvas.getContext("2d", { alpha: true });
 const frameCanvas = document.createElement("canvas");
 const context = frameCanvas.getContext("2d", { alpha: true });
@@ -184,7 +190,9 @@ async function draw() {
       const dpr = window.devicePixelRatio || 1;
       const pixelWidth = Math.round(width * dpr);
       const pixelHeight = Math.round(height * dpr);
-      const viewportRect = viewportScreenRect;
+      // Fall back to the full extension viewport if Owlbear's screen transform
+      // is unavailable during initialization. This keeps the vision mask active.
+      const viewportRect = viewportScreenRect || { x: 0, y: 0, width, height };
       if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
@@ -255,9 +263,9 @@ OBR.onReady(async () => {
       await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [`${EXTENSION_ID}/preview-active`]: false });
       await OBR.popover.close(EXIT_POPOVER_ID).catch(() => {});
       await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
-      await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+      await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: extensionUrl("./").href, width: 520, height: 760 });
     };
-    const exitUrl = new URL("./preview-exit.html", location.href);
+    const exitUrl = extensionUrl("./preview-exit.html");
     await OBR.popover.open({
       id: EXIT_POPOVER_ID,
       url: exitUrl.href,

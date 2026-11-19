@@ -1,4 +1,5 @@
-import OBR, { buildShape } from "@owlbear-rodeo/sdk";
+import OBR, { buildImage } from "@owlbear-rodeo/sdk";
+import { version as extensionVersion } from "../package.json";
 
 const EXTENSION_ID = "ru.codex.personal-vision";
 const STATE_KEY = `${EXTENSION_ID}/state`;
@@ -11,7 +12,12 @@ const PLACE_PRESET_KEY = `${EXTENSION_ID}/place-preset`;
 const LIGHT_MARKER_KEY = `${EXTENSION_ID}/light-marker`;
 const LIGHT_DATA_KEY = `${EXTENSION_ID}/light-data`;
 const PREVIEW_ACTIVE_KEY = `${EXTENSION_ID}/preview-active`;
-const visionUrl = new URL("./viewer.html", location.href).href;
+const extensionUrl = (path) => {
+  const url = new URL(path, location.href);
+  url.searchParams.set("v", extensionVersion);
+  return url;
+};
+const visionUrl = extensionUrl("./viewer.html").href;
 
 function selectVision(state, playerId) {
   return Object.values(state?.assignments || {}).find((entry) => entry.playerId === playerId) || null;
@@ -26,7 +32,7 @@ OBR.onReady(async () => {
     await OBR.tool.create({
       id: TOOL_ID,
       icons: [{
-        icon: new URL("./eye-icon-v3.svg", location.href).toString(),
+        icon: extensionUrl("./eye-icon-v3.svg").href,
         label: "Личный обзор · настройка",
         filter: { roles: ["GM"] },
       }],
@@ -35,7 +41,7 @@ OBR.onReady(async () => {
         if (metadata?.[PREVIEW_ACTIVE_KEY] || context.metadata?.[PREVIEW_ACTIVE_KEY]) {
           await OBR.tool.setMetadata(TOOL_ID, { [PREVIEW_ACTIVE_KEY]: false });
           await OBR.popover.close(EXIT_POPOVER_ID).catch(() => {});
-          await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+          await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: extensionUrl("./").href, width: 520, height: 760 });
           await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
           return false;
         }
@@ -46,7 +52,7 @@ OBR.onReady(async () => {
     await OBR.tool.createMode({
       id: PLACE_MODE_ID,
       icons: [{
-        icon: new URL("./eye-icon-v3.svg", location.href).toString(),
+        icon: extensionUrl("./eye-icon-v3.svg").href,
         label: "Личный обзор · поставить источник света",
         filter: { roles: ["GM"] },
       }],
@@ -71,18 +77,13 @@ OBR.onReady(async () => {
             tint: Boolean(preset.tint),
             marker: true,
           };
-          const marker = buildShape()
-            .shapeType("CIRCLE")
-            .width(Math.max(42, dpi * 0.85))
-            .height(Math.max(42, dpi * 0.85))
-            .fillColor("#ffd04d")
-            .fillOpacity(1)
-            .strokeColor("#572b00")
-            .strokeOpacity(1)
-            .strokeWidth(6)
-            .name(`💡 Источник света · ${preset.name}`)
+          const marker = buildImage(
+            { width: 64, height: 64, mime: "image/svg+xml", url: extensionUrl("./light-marker.svg").href },
+            { offset: { x: 0, y: 0 }, dpi },
+          )
+            .name(`Источник света · ${preset.name}`)
             .position(event.pointerPosition)
-            .layer("DRAWING")
+            .layer("PROP")
             .visible(true)
             .locked(false)
             .metadata({ [LIGHT_MARKER_KEY]: true, [LIGHT_DATA_KEY]: lightData })

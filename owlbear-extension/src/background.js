@@ -1,4 +1,5 @@
 import OBR from "@owlbear-rodeo/sdk";
+import { syncStatusLabel } from "./status-label.js";
 
 const EXTENSION_ID = "ru.codex.party-book";
 const POPOVER_ID = `${EXTENSION_ID}/character-sheet`;
@@ -32,15 +33,42 @@ async function autoBindNamedTokens(ownerKey) {
   }
 }
 
+async function refreshOwnerStatusLabels(ownerKey) {
+  try {
+    if (!(await OBR.scene.isReady())) return;
+    const state = JSON.parse(localStorage.getItem(`party-book-v1:${ownerKey}`) || "null");
+    const characters = state?.characters || [];
+    if (!characters.length) return;
+    let bindings = {};
+    try { bindings = JSON.parse(localStorage.getItem(`party-book-owlbear-bindings-v1:${ownerKey}`) || "{}") || {}; } catch { bindings = {}; }
+    const tokens = await OBR.scene.items.getItems((item) => item.layer === "CHARACTER" && item.visible !== false);
+    for (const token of tokens) {
+      const character = characters.find((entry) => entry.id === bindings[token.id])
+        || characters.find((entry) => normalizeName(entry.name) === normalizeName(token.name));
+      if (character?.statusEffects?.length) await syncStatusLabel(token.id, character);
+    }
+  } catch (error) {
+    console.warn("Не удалось обновить метки статусов для новой версии", error);
+  }
+}
+
 OBR.onReady(async () => {
   if (await OBR.player.getRole() === "GM") {
     const ownerKey = encodeURIComponent(await OBR.player.getId());
     const syncBindings = () => autoBindNamedTokens(ownerKey);
     await syncBindings();
+    await refreshOwnerStatusLabels(ownerKey);
     OBR.scene.items.onChange(syncBindings);
-    OBR.scene.onReadyChange(syncBindings);
+    OBR.scene.onReadyChange(async (ready) => {
+      if (!ready) return;
+      await syncBindings();
+      await refreshOwnerStatusLabels(ownerKey);
+    });
     window.addEventListener("storage", (event) => {
-      if (event.key === `party-book-v1:${ownerKey}` || event.key === `party-book-owlbear-bindings-v1:${ownerKey}`) syncBindings();
+      if (event.key === `party-book-v1:${ownerKey}` || event.key === `party-book-owlbear-bindings-v1:${ownerKey}`) {
+        syncBindings();
+        refreshOwnerStatusLabels(ownerKey);
+      }
     });
   }
   const presentationModalId = `${EXTENSION_ID}/presentation-modal`;

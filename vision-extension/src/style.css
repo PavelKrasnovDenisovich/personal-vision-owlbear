@@ -5,6 +5,7 @@ body { margin: 0; min-width: 320px; }
 header { padding: 3px 2px 14px; border-bottom: 1px solid #343c31; }
 .eyebrow { color: #a8c181; font-size: 9px; font-weight: 800; letter-spacing: .13em; }
 h1 { margin: 6px 0; font: 600 25px Georgia,serif; color: #e4edda; }
+.version-tag { display: inline-block; vertical-align: middle; margin-left: 5px; padding: 4px 7px; border: 1px solid #86a9b5; border-radius: 999px; background: #16323a; color: #bceeff; font: 800 10px/1 system-ui,sans-serif; letter-spacing: .04em; }
 h2 { margin: 0; font: 600 17px Georgia,serif; }
 p { color: #a5ae9e; font-size: 11px; line-height: 1.5; }
 header p { margin: 4px 0 0; }
