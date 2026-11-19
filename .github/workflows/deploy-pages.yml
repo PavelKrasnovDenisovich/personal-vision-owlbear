@@ -65,7 +65,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { readFileSync, existsSync } from "node:fs";
-          for (const [path, expected] of [["site/manifest.json", "1.2.5"], ["site/vision/manifest.json", "0.3.0"]]) {
+          for (const [path, expected] of [["site/manifest.json", "1.2.5"], ["site/vision/manifest.json", "0.3.1"]]) {
             const manifest = JSON.parse(readFileSync(path, "utf8"));
             console.log(`${manifest.name}: v${manifest.version} (${path})`);
             if (manifest.version !== expected) throw new Error(`Unexpected version in ${path}: ${manifest.version}`);

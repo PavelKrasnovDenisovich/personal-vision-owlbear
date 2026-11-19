@@ -89,6 +89,27 @@ function tintCircle(circle) {
   context.fill();
 }
 
+function revealToolbarButtons(width, height) {
+  // Owlbear places Move/Select and the drawing tools in a fixed rail on the
+  // right edge of the scene viewport. Cut only the button-sized circles out
+  // of the darkness; broad edge strips reveal large parts of the map.
+  const toolbarX = width - 43;
+  const firstButtonY = 87;
+  const buttonSpacing = 43;
+  const buttonRadius = 19;
+  context.save();
+  context.globalCompositeOperation = "destination-out";
+  context.fillStyle = "#000";
+  for (let index = 0; index < 11; index += 1) {
+    const y = firstButtonY + index * buttonSpacing;
+    if (y - buttonRadius < 0 || y + buttonRadius > height) continue;
+    context.beginPath();
+    context.arc(toolbarX, y, buttonRadius, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
 function drawLightGuides(circles) {
   if (!isGmPreview) return;
   const lights = circles.filter((circle) => circle.light);
@@ -183,17 +204,14 @@ async function draw() {
       context.globalAlpha = 1;
       const masked = Boolean(assignment) && (blind || ambient === "dark");
       if (masked) {
-        context.fillStyle = "rgba(0,0,0,0.97)";
+        context.fillStyle = "rgba(0,0,0,1)";
         context.fillRect(0, 0, width, height);
         for (const circle of circles.filter((entry) => entry.vision || entry.self)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.vision && entry.tint)) tintCircle(circle);
         for (const circle of circles.filter((entry) => entry.light && entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.light && entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
         for (const circle of circles.filter((entry) => entry.tint && entry.light)) tintCircle(circle);
-        // The canvas is a fullscreen modal above Owlbear's interface. Clear the
-        // tool rail and token dock after drawing the mask so those controls remain visible.
-        context.clearRect(0, 0, Math.min(width, 92), height);
-        context.clearRect(0, Math.max(0, height - 172), width, Math.min(172, height));
+        revealToolbarButtons(width, height);
         drawLightGuides(circles);
       } else if (isGmPreview) {
         drawLightGuides(circles);
