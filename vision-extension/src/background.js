@@ -24,7 +24,7 @@ OBR.onReady(async () => {
     await OBR.tool.create({
       id: TOOL_ID,
       icons: [{
-        icon: new URL("./eye-icon-v2.svg", location.href).toString(),
+        icon: new URL("./eye-icon-v3.svg", location.href).toString(),
         label: "Личный обзор · настройка",
         filter: { roles: ["GM"] },
       }],
@@ -43,7 +43,7 @@ OBR.onReady(async () => {
     await OBR.tool.createMode({
       id: PLACE_MODE_ID,
       icons: [{
-        icon: new URL("./eye-icon-v2.svg", location.href).toString(),
+        icon: new URL("./eye-icon-v3.svg", location.href).toString(),
         label: "Личный обзор · поставить источник света",
         filter: { roles: ["GM"] },
       }],
@@ -57,7 +57,7 @@ OBR.onReady(async () => {
         const dpiValue = Number(await OBR.scene.grid.getDpi());
         const dpi = dpiValue > 0 ? dpiValue : 70;
         const marker = buildImage(
-          { width: 12, height: 12, mime: "image/svg+xml", url: new URL("./light-marker.svg", location.href).href },
+          { width: 64, height: 64, mime: "image/svg+xml", url: new URL("./light-marker.svg", location.href).href },
           { offset: { x: 0, y: 0 }, dpi },
         )
           .name(`Метка света · ${preset.name}`)

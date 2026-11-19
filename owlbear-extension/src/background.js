@@ -68,7 +68,7 @@ OBR.onReady(async () => {
   OBR.tool.create({
     id: BATTLE_TOOL_ID,
     icons: [{
-      icon: new URL("./book-icon-v2.svg", location.href).toString(),
+      icon: new URL("./book-icon-v3.svg", location.href).toString(),
       label: "Книга партии · боевая панель",
       filter: { roles: ["GM"] },
     }],
@@ -85,7 +85,7 @@ OBR.onReady(async () => {
   OBR.contextMenu.create({
     id: `${EXTENSION_ID}/context-menu`,
     icons: [{
-      icon: new URL("./book-icon-v2.svg", location.href).toString(),
+      icon: new URL("./book-icon-v3.svg", location.href).toString(),
       label: "Книга партии · лист персонажа",
       filter: { every: [{ key: "layer", value: "CHARACTER" }], roles: ["GM"] },
     }],

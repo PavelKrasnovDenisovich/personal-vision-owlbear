@@ -145,7 +145,7 @@ function render() {
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
     await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PREVIEW_ACTIVE_KEY]: true });
     await OBR.popover.close(`${EXTENSION_ID}/manager`);
-    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true });
   };
   root.querySelectorAll("[data-preview-assignment]").forEach((button) => button.onclick = async () => {
     const entry = roomState.assignments[button.dataset.previewAssignment];
@@ -154,7 +154,7 @@ function render() {
     await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
     await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [PREVIEW_ACTIVE_KEY]: true });
     await OBR.popover.close(`${EXTENSION_ID}/manager`);
-    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true, disablePointerEvents: true });
+    await OBR.modal.open({ id: PREVIEW_MODAL_ID, url: url.href, fullScreen: true, hideBackdrop: true, hidePaper: true });
   });
   root.querySelectorAll("[data-remove-assignment]").forEach((button) => button.onclick = async () => { delete roomState.assignments[button.dataset.removeAssignment]; await persist(); });
   root.querySelectorAll("[data-remove-light]").forEach((button) => button.onclick = async () => {

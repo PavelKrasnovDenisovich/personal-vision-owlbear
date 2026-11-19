@@ -80,6 +80,32 @@ function tintCircle(circle) {
   context.fill();
 }
 
+function drawLightGuides(circles) {
+  if (!isGmPreview) return;
+  const lights = circles.filter((circle) => circle.light);
+  context.save();
+  context.globalCompositeOperation = "source-over";
+  for (const circle of lights) {
+    if (!(circle.radius > 0)) continue;
+    context.beginPath();
+    context.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+    context.strokeStyle = circle.bright ? "rgba(255,213,112,0.82)" : "rgba(255,213,112,0.48)";
+    context.lineWidth = circle.bright ? 2 : 1.5;
+    context.setLineDash(circle.bright ? [] : [7, 6]);
+    context.stroke();
+  }
+  for (const circle of lights.filter((entry) => entry.bright)) {
+    context.setLineDash([]);
+    context.beginPath();
+    context.arc(circle.x, circle.y, 5, 0, Math.PI * 2);
+    context.fillStyle = "#ffd570";
+    context.shadowColor = "#ffb52e";
+    context.shadowBlur = 12;
+    context.fill();
+  }
+  context.restore();
+}
+
 async function draw() {
   if (drawing) {
     drawPending = true;
@@ -107,8 +133,8 @@ async function draw() {
           if (!center) continue;
           const point = await screenPoint(center);
           if (!point) continue;
-          circles.push({ ...point, radius: radiusFor(light.dimCells), strength: light.tint ? 0.68 : 0.45, tint: Boolean(light.tint) });
-          circles.push({ ...point, radius: radiusFor(light.brightCells), strength: 1 });
+          circles.push({ ...point, radius: radiusFor(light.dimCells), strength: light.tint ? 0.68 : 0.45, tint: Boolean(light.tint), light: true });
+          circles.push({ ...point, radius: radiusFor(light.brightCells), strength: 1, light: true, bright: true });
         }
       }
 
@@ -136,6 +162,7 @@ async function draw() {
       for (const circle of circles.filter((entry) => entry.strength < 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
       for (const circle of circles.filter((entry) => entry.strength === 1)) eraseCircle(circle.x, circle.y, circle.radius, circle.strength);
       for (const circle of circles.filter((entry) => entry.tint)) tintCircle(circle);
+      drawLightGuides(circles);
       context.globalCompositeOperation = "source-over";
       displayContext.setTransform(1, 0, 0, 1, 0, 0);
       displayContext.clearRect(0, 0, pixelWidth, pixelHeight);
@@ -163,6 +190,18 @@ OBR.onReady(async () => {
   } : null;
   window.__visionPreviewAmbient = isGmPreview && requestedTokenId ? params.get("previewAmbient") : null;
   if (isGmPreview) {
+    const exitButton = document.createElement("button");
+    exitButton.type = "button";
+    exitButton.textContent = "×  Выйти из предпросмотра";
+    exitButton.setAttribute("aria-label", "Выйти из предпросмотра личного обзора");
+    exitButton.style.cssText = "position:fixed;z-index:2147483647;top:16px;right:18px;pointer-events:auto;cursor:pointer;border:2px solid #8be9e2;border-radius:999px;background:#10262a;color:#fff;padding:12px 18px;font:700 15px/1.2 system-ui,sans-serif;box-shadow:0 4px 20px #000a";
+    document.body.append(exitButton);
+    const exitPreview = async () => {
+      await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [`${EXTENSION_ID}/preview-active`]: false });
+      await OBR.modal.close(PREVIEW_MODAL_ID).catch(() => {});
+      await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
+    };
+    exitButton.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); exitPreview(); });
     document.body.tabIndex = -1;
     document.body.focus({ preventScroll: true });
     window.focus();
@@ -170,9 +209,7 @@ OBR.onReady(async () => {
       if (event.key !== "Escape") return;
       event.preventDefault();
       event.stopPropagation();
-      await OBR.popover.open({ id: `${EXTENSION_ID}/manager`, url: new URL("./", location.href).href, width: 520, height: 760 });
-      await OBR.tool.setMetadata(`${EXTENSION_ID}/gm-tool`, { [`${EXTENSION_ID}/preview-active`]: false });
-      await OBR.modal.close(PREVIEW_MODAL_ID);
+      await exitPreview();
     }, true);
   }
   await refreshScene();

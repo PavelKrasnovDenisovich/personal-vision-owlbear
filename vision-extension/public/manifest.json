@@ -1,9 +1,9 @@
 {
   "name": "Личный обзор",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "manifest_version": 1,
   "description": "Персональная маска зрения для каждого игрока по токену персонажа.",
-  "icon": "/eye-icon-v2.svg",
+  "icon": "/eye-icon-v3.svg",
   "author": "Codex",
   "background_url": "/background.html"
 }

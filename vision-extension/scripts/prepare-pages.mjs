@@ -9,7 +9,7 @@ const base = `/${requestedBase.replace(/^\/+|\/+$/g, "")}/`.replace(/^\/\/$/, "/
 const manifestPath = resolve(dist, "manifest.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 
-manifest.icon = `${base}eye-icon-v2.svg`;
+manifest.icon = `${base}eye-icon-v3.svg`;
 manifest.background_url = `${base}background.html`;
 await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
